@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 const SECRET = process.env.JWT_SECRET || "your-secret-key";
 
-export async function GET(req: Request) {
+export async function GET() {
   const cookieStore = cookies();
   const token = (await cookieStore).get("token")?.value;
 

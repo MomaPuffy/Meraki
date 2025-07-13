@@ -1,11 +1,8 @@
-import { useRouter } from "next/router";
 import Navbar from "../app/components/navbar/Navbar";
 import { signIn } from "next-auth/react";
 import Image from "next/image";
 
 export default function Login() {
-  const router = useRouter();
-
   return (
     <>
       <Navbar />
