@@ -102,6 +102,7 @@ export default function Profile() {
         <Navbar />
         <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-200 flex justify-center items-center px-4">
           <div className="bg-white p-6 sm:p-8 rounded-lg shadow-lg max-w-sm w-full">
+            # TODO: Add way to change profile color based on department
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
             <p className="text-center mt-4 text-gray-600 text-sm sm:text-base">
               Loading your profile...
