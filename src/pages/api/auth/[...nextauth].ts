@@ -77,6 +77,11 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: "jwt" as const,
+    maxAge: parseInt(process.env.SESSION_MAX_AGE!) || 12 * 60 * 60, // 12 hours (in seconds)
+    updateAge: 60 * 60, // Update session every hour (in seconds)
+  },
+  jwt: {
+    maxAge: parseInt(process.env.JWT_MAX_AGE!) || 12 * 60 * 60, // 12 hours (in seconds)
   },
   callbacks: {
     async signIn({ user, account }: { user: User; account: Account | null; profile?: Profile }) {
@@ -123,6 +128,7 @@ export const authOptions: NextAuthOptions = {
           }
         }
       }
+      
       return token;
     },
     async session({ session, token }: { session: Session; token: JWT }) {
