@@ -29,7 +29,9 @@ export default function MyApp({ Component, pageProps }: AppProps) {
   return (
     <SessionProvider session={pageProps.session}>
       <AuthGuard>
-        <Component {...pageProps} />
+        <div className="min-h-screen bg-gray-100 text-black">
+          <Component {...pageProps} />
+        </div>
       </AuthGuard>
     </SessionProvider>
   );
