@@ -49,7 +49,7 @@ export const uploadImage = async (base64Image: string, folder: string = 'attenda
 };
 
 // Generate signed URLs for private images
-export const getSignedImageUrl = (publicId: string, transformation?: any) => {
+export const getSignedImageUrl = (publicId: string, transformation?: object) => {
   return cloudinary.url(publicId, {
     type: 'private',
     sign_url: true,

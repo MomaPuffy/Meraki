@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
+import Image from "next/image";
 import Navbar from "../app/components/navbar/Navbar";
 
 interface AttendanceRecord {
@@ -55,6 +56,7 @@ export default function Attendance() {
         setMessage("Failed to fetch attendance records");
       }
     } catch (error) {
+      console.error("Fetch attendance error:", error);
       setMessage("Error fetching attendance records");
     } finally {
       setLoading(false);
@@ -70,6 +72,7 @@ export default function Attendance() {
         videoRef.current.srcObject = stream;
       }
     } catch (error) {
+      console.error("Camera access error:", error);
       setMessage("Camera access denied");
       setShowCamera(false);
     }
@@ -125,6 +128,7 @@ export default function Attendance() {
         setMessage(data.error || "Failed to record attendance");
       }
     } catch (error) {
+      console.error("Submit attendance error:", error);
       setMessage("Error recording attendance");
     } finally {
       setActionLoading(false);
@@ -192,7 +196,9 @@ export default function Attendance() {
 
         {/* Action Buttons */}
         <div className="mb-8 bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-4">Today's Attendance</h2>
+          <h2 className="text-xl font-semibold mb-4">
+            Today&apos;s Attendance
+          </h2>
           <div className="flex flex-wrap gap-4">
             <button
               onClick={() => startCamera("time-in")}
@@ -237,10 +243,12 @@ export default function Attendance() {
               {(todayRecord.timeInImage || todayRecord.timeOutImage) && (
                 <div className="flex gap-2 mt-2">
                   {todayRecord.timeInImage && (
-                    <img
+                    <Image
                       src={todayRecord.timeInImage.thumbnail}
                       alt="Time In Photo"
-                      className="w-16 h-16 rounded-lg object-cover border-2 border-green-200 cursor-pointer"
+                      width={64}
+                      height={64}
+                      className="rounded-lg object-cover border-2 border-green-200 cursor-pointer"
                       onClick={() =>
                         window.open(todayRecord.timeInImage!.url, "_blank")
                       }
@@ -248,10 +256,12 @@ export default function Attendance() {
                     />
                   )}
                   {todayRecord.timeOutImage && (
-                    <img
+                    <Image
                       src={todayRecord.timeOutImage.thumbnail}
                       alt="Time Out Photo"
-                      className="w-16 h-16 rounded-lg object-cover border-2 border-red-200 cursor-pointer"
+                      width={64}
+                      height={64}
+                      className="rounded-lg object-cover border-2 border-red-200 cursor-pointer"
                       onClick={() =>
                         window.open(todayRecord.timeOutImage!.url, "_blank")
                       }
@@ -370,10 +380,12 @@ export default function Attendance() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <div className="flex gap-2">
                           {record.timeInImage && (
-                            <img
+                            <Image
                               src={record.timeInImage.thumbnail}
                               alt="Time In Photo"
-                              className="w-12 h-12 rounded-lg object-cover cursor-pointer border-2 border-green-200"
+                              width={48}
+                              height={48}
+                              className="rounded-lg object-cover cursor-pointer border-2 border-green-200"
                               onClick={() =>
                                 window.open(record.timeInImage!.url, "_blank")
                               }
@@ -381,10 +393,12 @@ export default function Attendance() {
                             />
                           )}
                           {record.timeOutImage && (
-                            <img
+                            <Image
                               src={record.timeOutImage.thumbnail}
                               alt="Time Out Photo"
-                              className="w-12 h-12 rounded-lg object-cover cursor-pointer border-2 border-red-200"
+                              width={48}
+                              height={48}
+                              className="rounded-lg object-cover cursor-pointer border-2 border-red-200"
                               onClick={() =>
                                 window.open(record.timeOutImage!.url, "_blank")
                               }
