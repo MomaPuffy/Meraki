@@ -11,6 +11,7 @@ export default function Navbar() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const mobileButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -19,7 +20,9 @@ export default function Navbar() {
       }
       if (
         mobileMenuRef.current &&
-        !mobileMenuRef.current.contains(e.target as Node)
+        !mobileMenuRef.current.contains(e.target as Node) &&
+        mobileButtonRef.current &&
+        !mobileButtonRef.current.contains(e.target as Node)
       ) {
         setShowMobileMenu(false);
       }
@@ -58,6 +61,36 @@ export default function Navbar() {
               className="hover:border-b-white hover:border-b-1 px-2 py-1"
             >
               Attendance
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="https://docs.google.com/spreadsheets/d/1BLdK3ry7XJymGRWiVIefZ1kdpxpWy-2XajthgD9ItPg"
+              className="hover:border-b-white hover:border-b-1 px-2 py-1"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Directory
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="https://docs.google.com/spreadsheets/d/10AYkMS8_EohZqHXsZ3sA_qh-8iwRpfSeQTUfJa_XtMM"
+              className="hover:border-b-white hover:border-b-1 px-2 py-1"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Task List
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="https://docs.google.com/spreadsheets/d/1JDq0LJWWzSISmtPTg3dt1KPX0LueThb7j1Pe95vUEDw"
+              className="hover:border-b-white hover:border-b-1 px-2 py-1"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Department Tasks
             </Link>
           </li>
           <li>
@@ -128,6 +161,7 @@ export default function Navbar() {
           </div>
         )}
         <button
+          ref={mobileButtonRef}
           onClick={() => setShowMobileMenu(!showMobileMenu)}
           className="ml-2 p-2 text-white focus:outline-none"
           aria-label="Toggle menu"
@@ -180,6 +214,36 @@ export default function Navbar() {
                 onClick={() => setShowMobileMenu(false)}
               >
                 Attendance
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="https://docs.google.com/spreadsheets/d/1BLdK3ry7XJymGRWiVIefZ1kdpxpWy-2XajthgD9ItPg"
+                className="block px-4 py-3 hover:bg-[#424242] transition-colors"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Directory
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="https://docs.google.com/spreadsheets/d/10AYkMS8_EohZqHXsZ3sA_qh-8iwRpfSeQTUfJa_XtMM"
+                className="block px-4 py-3 hover:bg-[#424242] transition-colors"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Task List
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="https://docs.google.com/spreadsheets/d/1JDq0LJWWzSISmtPTg3dt1KPX0LueThb7j1Pe95vUEDw"
+                className="block px-4 py-3 hover:bg-[#424242] transition-colors"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Department Tasks
               </Link>
             </li>
             {session ? (
