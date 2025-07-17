@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "./auth/[...nextauth]";
 import clientPromise from '../../lib/mongodb';
+import { getUserColorKey } from '../../lib/colorConfig';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'PUT') {
@@ -16,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
-    const { name } = req.body;
+    const { name, department } = req.body;
 
     if (!name || name.trim().length === 0) {
       return res.status(400).json({ message: 'Name is required' });
@@ -26,15 +27,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ message: 'Name must be less than 100 characters' });
     }
 
-    // Update user data in database
+    // Get current user to preserve position and calculate color
     const client = await clientPromise;
     const db = client.db("meraki");
+    
+    const currentUser = await db.collection("users").findOne({ 
+      email: session.user.email 
+    });
+
+    if (!currentUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Calculate color based on current position and new department
+    const userColor = getUserColorKey(currentUser.position, department || "Unassigned");
     
     const result = await db.collection("users").updateOne(
       { email: session.user.email },
       { 
         $set: { 
           name: name.trim(),
+          department: department || "Unassigned",
+          color: userColor,
           updatedAt: new Date()
         } 
       }

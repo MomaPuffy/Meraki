@@ -1,13 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import clientPromise from '../../lib/mongodb';
 import bcrypt from 'bcryptjs';
+import { getUserColorKey } from '../../lib/colorConfig';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  const { name, email, password } = req.body;
+  const { name, email, password, department, position } = req.body;
 
   if (!name || !email || !password) {
     return res.status(400).json({ message: 'Missing required fields' });
@@ -46,6 +47,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       email,
       password: hashedPassword,
       provider: "credentials",
+      department: department || "Unassigned",
+      position: position || "Unassigned",
+      color: getUserColorKey(position || "Unassigned", department || "Unassigned"),
       createdAt: new Date(),
     });
 

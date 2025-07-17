@@ -2,6 +2,7 @@ import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Navbar from "../app/components/navbar/Navbar";
+import { getUserColorTheme } from "../lib/colorConfig";
 
 interface UserProfile {
   id: string;
@@ -9,7 +10,9 @@ interface UserProfile {
   email: string;
   image?: string;
   provider: string;
-  googleId?: string;
+  department?: string;
+  position?: string;
+  color?: string;
   createdAt: string;
 }
 
@@ -20,6 +23,7 @@ export default function Profile() {
   const [error, setError] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
+  const [editDepartment, setEditDepartment] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -34,6 +38,7 @@ export default function Profile() {
           if (response.ok) {
             setUserProfile(data.user);
             setEditName(data.user.name); // Initialize edit name
+            setEditDepartment(data.user.department || ""); // Initialize edit department
           } else {
             setError(data.message || "Failed to fetch profile");
           }
@@ -69,6 +74,7 @@ export default function Profile() {
         },
         body: JSON.stringify({
           name: editName.trim(),
+          department: editDepartment.trim(),
         }),
       });
 
@@ -93,6 +99,7 @@ export default function Profile() {
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditName(userProfile?.name || "");
+    setEditDepartment(userProfile?.department || "");
     setSaveError("");
   };
 
@@ -154,7 +161,19 @@ export default function Profile() {
         <div className="max-w-4xl mx-auto">
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             {/* Header Section */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-4 sm:px-6 py-6 sm:py-8">
+            <div
+              className={`bg-gradient-to-r ${
+                getUserColorTheme(
+                  userProfile?.position,
+                  userProfile?.department
+                ).headerFrom
+              } ${
+                getUserColorTheme(
+                  userProfile?.position,
+                  userProfile?.department
+                ).headerTo
+              } px-4 sm:px-6 py-6 sm:py-8`}
+            >
               <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
                 <div className="relative flex-shrink-0">
                   {userProfile?.image ? (
@@ -181,7 +200,19 @@ export default function Profile() {
                     {userProfile?.email}
                   </p>
                   <div className="flex justify-center sm:justify-start items-center mt-2">
-                    <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-blue-100 text-blue-800">
+                    <span
+                      className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
+                        getUserColorTheme(
+                          userProfile?.position,
+                          userProfile?.department
+                        ).badgeBg
+                      } ${
+                        getUserColorTheme(
+                          userProfile?.position,
+                          userProfile?.department
+                        ).badgeText
+                      }`}
+                    >
                       {userProfile?.provider === "google" ? (
                         <>
                           <Image
@@ -293,6 +324,53 @@ export default function Profile() {
                       />
                     </div>
 
+                    <div>
+                      <label
+                        htmlFor="editDepartment"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
+                        Department
+                        {userProfile?.department &&
+                          userProfile.department !== "Unassigned" && (
+                            <span className="ml-2 text-xs text-green-600 font-medium">
+                              (Permanent)
+                            </span>
+                          )}
+                      </label>
+                      {userProfile?.department &&
+                      userProfile.department !== "Unassigned" ? (
+                        <div className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 text-black text-base">
+                          {userProfile.department}
+                          <p className="text-xs text-gray-500 mt-1">
+                            Department selection is permanent and cannot be
+                            changed.
+                          </p>
+                        </div>
+                      ) : (
+                        <select
+                          id="editDepartment"
+                          value={editDepartment}
+                          onChange={(e) => setEditDepartment(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black text-base bg-white"
+                        >
+                          <option value="">Select Department</option>
+                          <option value="Documentary Department">
+                            Documentary Department
+                          </option>
+                          <option value="Multimedia Department">
+                            Multimedia Department
+                          </option>
+                          <option value="Event Coordinator">
+                            Event Coordinator
+                          </option>
+                          <option value="Crafting Department">
+                            Crafting Department
+                          </option>
+                          <option value="Cosplayer">Cosplayer</option>
+                        </select>
+                      )}
+                    </div>
+
                     {saveError && (
                       <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md border border-red-200">
                         {saveError}
@@ -395,23 +473,21 @@ export default function Profile() {
                 <div className="space-y-4">
                   <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      User ID
+                      Department
                     </label>
-                    <p className="text-xs sm:text-sm text-gray-600 font-mono break-all">
-                      {userProfile?.id}
+                    <p className="text-base sm:text-lg text-gray-900 break-words">
+                      {userProfile?.department || "Unassigned"}
                     </p>
                   </div>
 
-                  {userProfile?.googleId && (
-                    <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Google ID
-                      </label>
-                      <p className="text-xs sm:text-sm text-gray-600 font-mono break-all">
-                        {userProfile.googleId}
-                      </p>
-                    </div>
-                  )}
+                  <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Position
+                    </label>
+                    <p className="text-base sm:text-lg text-gray-900 break-words">
+                      {userProfile?.position || "Unassigned"}
+                    </p>
+                  </div>
 
                   <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
                     <label className="block text-sm font-medium text-gray-700 mb-1">

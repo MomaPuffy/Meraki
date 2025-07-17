@@ -5,6 +5,7 @@ import clientPromise from "../../../lib/mongodb";
 import bcrypt from "bcryptjs";
 import { JWT } from "next-auth/jwt";
 import { Session } from "next-auth";
+import { getUserColorKey } from "../../../lib/colorConfig";
 
 // Extend the built-in session types
 declare module "next-auth" {
@@ -100,7 +101,9 @@ export const authOptions: NextAuthOptions = {
               name: user.name,
               image: user.image,
               provider: "google",
-              googleId: user.id,
+              department: "Unassigned",
+              position: "Unassigned",
+              color: getUserColorKey("Unassigned", "Unassigned"),
               createdAt: new Date(),
             });
           }
