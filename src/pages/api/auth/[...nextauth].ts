@@ -102,8 +102,8 @@ export const authOptions: NextAuthOptions = {
               image: user.image,
               provider: "google",
               department: "Unassigned",
-              position: "Unassigned",
-              color: getUserColorKey("Unassigned", "Unassigned"),
+              position: "Member",
+              color: getUserColorKey("Member", "Unassigned"),
               createdAt: new Date(),
             });
           }

@@ -485,7 +485,7 @@ export default function Profile() {
                       Position
                     </label>
                     <p className="text-base sm:text-lg text-gray-900 break-words">
-                      {userProfile?.position || "Unassigned"}
+                      {userProfile?.position || "Member"}
                     </p>
                   </div>
 

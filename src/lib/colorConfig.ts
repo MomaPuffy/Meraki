@@ -74,6 +74,7 @@ export const POSITION_COLOR_MAP: Record<string, ColorKey> = {
   "advisor": "green",
   "president": "green", 
   "vice-president": "green",
+  "member": "blue", // default position
   // Add more positions here as needed
   // "secretary": "purple",
   // "treasurer": "orange",

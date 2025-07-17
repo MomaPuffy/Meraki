@@ -48,8 +48,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       password: hashedPassword,
       provider: "credentials",
       department: department || "Unassigned",
-      position: position || "Unassigned",
-      color: getUserColorKey(position || "Unassigned", department || "Unassigned"),
+      position: position || "Member",
+      color: getUserColorKey(position || "Member", department || "Unassigned"),
       createdAt: new Date(),
     });
 
