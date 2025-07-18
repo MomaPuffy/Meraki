@@ -101,7 +101,7 @@ export default async function handler(
     const usersWithLoginStatus = users.map((user) => {
       const todayAttendance = todayAttendanceMap.get(user.email);
       return {
-        id: user._id.toString(),
+        id: user._id?.toString() || "",
         name: user.name,
         email: user.email,
         image: user.image || null,

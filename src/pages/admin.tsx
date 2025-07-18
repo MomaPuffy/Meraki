@@ -29,6 +29,8 @@ export default function Admin() {
   const [searchTerm, setSearchTerm] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [positionFilter, setPositionFilter] = useState("");
+  const [resetLoading, setResetLoading] = useState<string | null>(null);
+  const [resetMessage, setResetMessage] = useState("");
 
   // Check if user has admin privileges
   const isAdmin = (position?: string) => {
@@ -77,6 +79,40 @@ export default function Admin() {
 
     fetchData();
   }, [session, status]);
+
+  const handleResetPassword = async (userId: string, userEmail: string) => {
+    if (
+      !confirm(`Are you sure you want to reset the password for ${userEmail}?`)
+    ) {
+      return;
+    }
+
+    setResetLoading(userId);
+    setResetMessage("");
+
+    try {
+      const response = await fetch("/api/admin/reset-user-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setResetMessage(`Password reset email sent to ${userEmail}`);
+        setTimeout(() => setResetMessage(""), 5000);
+      } else {
+        setError(data.message || "Failed to reset password");
+      }
+    } catch (err) {
+      setError(`Failed to reset password: ${err}`);
+    } finally {
+      setResetLoading(null);
+    }
+  };
 
   // Filter users based on search and filters
   const filteredUsers = users.filter((user) => {
@@ -223,6 +259,12 @@ export default function Admin() {
                 </div>
               </div>
 
+              {resetMessage && (
+                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
+                  <p className="text-green-700 text-sm">{resetMessage}</p>
+                </div>
+              )}
+
               {/* Search and Filters */}
               <div className="mb-6 bg-gray-50 p-4 rounded-lg">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -301,6 +343,9 @@ export default function Admin() {
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Last Login
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
                         </th>
                       </tr>
                     </thead>
@@ -397,6 +442,19 @@ export default function Admin() {
                                     user.lastLoginTime
                                   ).toLocaleDateString()
                                 : "Never"}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <button
+                                onClick={() =>
+                                  handleResetPassword(user.id, user.email)
+                                }
+                                disabled={resetLoading === user.id}
+                                className="text-orange-600 hover:text-orange-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {resetLoading === user.id
+                                  ? "Sending..."
+                                  : "Reset Password"}
+                              </button>
                             </td>
                           </tr>
                         );
