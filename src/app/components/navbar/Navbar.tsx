@@ -114,16 +114,6 @@ export default function Navbar() {
           </li>
           <li>
             <Link
-              href="https://docs.google.com/spreadsheets/d/10AYkMS8_EohZqHXsZ3sA_qh-8iwRpfSeQTUfJa_XtMM"
-              className="hover:border-b-white hover:border-b-1 px-2 py-1"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Task List
-            </Link>
-          </li>
-          <li>
-            <Link
               href="https://docs.google.com/spreadsheets/d/1JDq0LJWWzSISmtPTg3dt1KPX0LueThb7j1Pe95vUEDw"
               className="hover:border-b-white hover:border-b-1 px-2 py-1"
               target="_blank"
