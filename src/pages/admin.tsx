@@ -16,6 +16,8 @@ interface UserData {
   createdAt: string;
   lastLoginToday?: boolean;
   lastLoginTime?: string;
+  timeInToday?: string;
+  timeOutToday?: string;
 }
 
 export default function Admin() {
@@ -287,6 +289,12 @@ export default function Admin() {
                           Login Status
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Time In
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Time Out
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Last Login
                         </th>
                       </tr>
@@ -348,6 +356,34 @@ export default function Admin() {
                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                                   Not Active
                                 </span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {user.timeInToday
+                                ? new Date(user.timeInToday).toLocaleTimeString(
+                                    [],
+                                    {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    }
+                                  )
+                                : "-"}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {user.timeOutToday ? (
+                                new Date(user.timeOutToday).toLocaleTimeString(
+                                  [],
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  }
+                                )
+                              ) : user.lastLoginToday ? (
+                                <span className="text-orange-600 font-medium">
+                                  Still Active
+                                </span>
+                              ) : (
+                                "-"
                               )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
