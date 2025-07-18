@@ -80,9 +80,14 @@ export default function Admin() {
 
   // Filter users based on search and filters
   const filteredUsers = users.filter((user) => {
+    const searchLower = searchTerm.toLowerCase();
     const matchesSearch =
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+      (user.name || "").toLowerCase().includes(searchLower) ||
+      (user.email || "").toLowerCase().includes(searchLower) ||
+      (user.position || "").toLowerCase().includes(searchLower) ||
+      (user.department || "").toLowerCase().includes(searchLower) ||
+      (user.provider || "").toLowerCase().includes(searchLower) ||
+      (user.id || "").toLowerCase().includes(searchLower);
     const matchesDepartment =
       !departmentFilter || user.department === departmentFilter;
     const matchesPosition = !positionFilter || user.position === positionFilter;
@@ -230,7 +235,7 @@ export default function Admin() {
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Search by name or email..."
+                      placeholder="Search by name, email, department, position, or provider..."
                     />
                   </div>
                   <div>
