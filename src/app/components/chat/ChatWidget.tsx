@@ -148,13 +148,6 @@ export default function ChatWidget() {
                     <p className="text-xs text-gray-500">No messages yet</p>
                   )}
                 </div>
-                {chat.messageCount > 0 && (
-                  <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                    <span className="text-xs text-white font-medium">
-                      {chat.messageCount > 99 ? "99+" : chat.messageCount}
-                    </span>
-                  </div>
-                )}
               </div>
             ))}
             <div className="pt-2 border-t">
