@@ -25,6 +25,13 @@ export default function UpcomingEvents() {
     }
   };
 
+  const formatEventTime = (date: Date) => {
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   if (upcomingEvents.length === 0) {
     return (
       <div className="space-y-2">
@@ -59,7 +66,7 @@ export default function UpcomingEvents() {
             <div>
               <p className="font-medium text-sm">{event.title}</p>
               <p className="text-xs text-gray-500">
-                {formatEventDate(event.date)} at {event.time}
+                {formatEventDate(event.date)} at {formatEventTime(event.date)}
               </p>
             </div>
             <span

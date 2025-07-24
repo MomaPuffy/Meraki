@@ -1,24 +1,54 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { useCalendar } from "../../../contexts/CalendarContext";
 import { CalendarEvent, EventFormData } from "../../../types/event";
+import { getUserColorTheme } from "../../../lib/colorConfig";
+
+interface UserProfile {
+  position?: string;
+  department?: string;
+}
 
 export default function Calendar() {
+  const { data: session, status } = useSession();
   const { events, addEvent, deleteEvent, canEdit } = useCalendar();
   const [showForm, setShowForm] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState<EventFormData>({
     title: "",
     description: "",
-    date: "",
-    time: "",
-    duration: 60,
+    datetime: "",
     category: "other",
   });
 
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (session) {
+        try {
+          const response = await fetch("/api/profile");
+          const data = await response.json();
+          if (response.ok) {
+            setUserProfile(data.user);
+          }
+        } catch (err) {
+          console.error("Profile fetch error:", err);
+        } finally {
+          setLoading(false);
+        }
+      } else if (status !== "loading") {
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [session, status]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const eventDate = new Date(formData.date);
+    const eventDate = new Date(formData.datetime);
     addEvent({
       ...formData,
       date: eventDate,
@@ -26,9 +56,7 @@ export default function Calendar() {
     setFormData({
       title: "",
       description: "",
-      date: "",
-      time: "",
-      duration: 60,
+      datetime: "",
       category: "other",
     });
     setShowForm(false);
@@ -39,96 +67,443 @@ export default function Calendar() {
       weekday: "short",
       month: "short",
       day: "numeric",
+      year: "numeric",
     });
   };
 
-  return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Calendar</h1>
-        {canEdit ? (
-          <button
-            onClick={() => setShowForm(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+  const formatEventTime = (date: Date) => {
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case "meeting":
+        return "border-blue-500";
+      case "deadline":
+        return "border-red-500";
+      case "personal":
+        return "border-green-500";
+      default:
+        return "border-gray-500";
+    }
+  };
+
+  const getCategoryBadge = (category: string) => {
+    switch (category) {
+      case "meeting":
+        return "bg-blue-100 text-blue-800";
+      case "deadline":
+        return "bg-red-100 text-red-800";
+      case "personal":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case "meeting":
+        return (
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
           >
-            Add Event
-          </button>
-        ) : (
-          <p className="text-sm text-gray-500">Admin access required to edit</p>
-        )}
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+            />
+          </svg>
+        );
+      case "deadline":
+        return (
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
+            />
+          </svg>
+        );
+      case "personal":
+        return (
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+            />
+          </svg>
+        );
+      default:
+        return (
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+            />
+          </svg>
+        );
+    }
+  };
+
+  if (status === "loading" || loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-200 flex justify-center items-center px-4">
+        <div className="bg-white p-6 sm:p-8 rounded-lg shadow-lg max-w-sm w-full">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-center mt-4 text-gray-600 text-sm sm:text-base">
+            Loading calendar...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const userColors = getUserColorTheme(
+    userProfile?.position,
+    userProfile?.department
+  );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-200 py-4 sm:py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto">
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          {/* Header Section */}
+          <div
+            className={`bg-gradient-to-r ${userColors.headerFrom} ${userColors.headerTo} px-4 sm:px-6 py-6 sm:py-8`}
+          >
+            <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
+              <div className="text-white text-center sm:text-left flex-1 min-w-0">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">
+                  Calendar
+                </h1>
+                <p className="text-blue-100 text-sm sm:text-base md:text-lg">
+                  Event Management & Schedule
+                </p>
+                <div className="flex justify-center sm:justify-start items-center mt-2">
+                  <span
+                    className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${userColors.badgeBg} ${userColors.badgeText}`}
+                  >
+                    {canEdit ? "Admin Access" : "View Only"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Calendar Content */}
+          <div className="px-4 sm:px-6 py-6 sm:py-8">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 space-y-4 sm:space-y-0">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+                Upcoming Events
+              </h2>
+              {canEdit ? (
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-transparent rounded-md shadow-sm text-xs sm:text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full sm:w-auto"
+                >
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  Add Event
+                </button>
+              ) : (
+                <p className="text-sm text-gray-500 text-center sm:text-right">
+                  Admin access required to manage events
+                </p>
+              )}
+            </div>
+
+            {/* Events Grid */}
+            {events.length === 0 ? (
+              <div className="text-center py-12">
+                <svg
+                  className="mx-auto h-12 w-12 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                <h3 className="mt-2 text-sm font-medium text-gray-900">
+                  No events scheduled
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Get started by creating your first event.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {events.map((event) => (
+                  <div
+                    key={event.id}
+                    className={`bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 border-l-4 ${getCategoryColor(
+                      event.category!
+                    )} overflow-hidden`}
+                  >
+                    {/* Card Header */}
+                    <div className="p-4 sm:p-6">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center space-x-2">
+                          <div
+                            className={`p-2 rounded-full ${getCategoryBadge(
+                              event.category!
+                            )}`}
+                          >
+                            {getCategoryIcon(event.category!)}
+                          </div>
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryBadge(
+                              event.category!
+                            )}`}
+                          >
+                            {event.category!.charAt(0).toUpperCase() +
+                              event.category!.slice(1)}
+                          </span>
+                        </div>
+                        {canEdit && (
+                          <button
+                            onClick={() => deleteEvent(event.id)}
+                            className="p-1 text-gray-400 hover:text-red-600 transition-colors duration-200"
+                            title="Delete event"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Event Title */}
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2 break-words">
+                        {event.title}
+                      </h3>
+
+                      {/* Event Description */}
+                      {event.description && (
+                        <p className="text-sm text-gray-600 mb-4 break-words line-clamp-3">
+                          {event.description}
+                        </p>
+                      )}
+
+                      {/* Event Details */}
+                      <div className="space-y-2">
+                        <div className="flex items-center text-sm text-gray-600">
+                          <svg
+                            className="w-4 h-4 mr-2 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            />
+                          </svg>
+                          <span className="font-medium">
+                            {formatEventDate(event.date)}
+                          </span>
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <svg
+                            className="w-4 h-4 mr-2 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          </svg>
+                          <span className="font-medium">
+                            {formatEventTime(event.date)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
+      {/* Add Event Modal */}
       {showForm && canEdit && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-96">
-            <h2 className="text-xl font-semibold mb-4">Add New Event</h2>
-            <form onSubmit={handleSubmit}>
+        <div className="fixed inset-0 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div
+              className={`bg-gradient-to-r ${userColors.headerFrom} ${userColors.headerTo} px-4 sm:px-6 py-6 sm:py-8`}
+            >
+              <h2 className="text-xl font-semibold text-white">
+                Add New Event
+              </h2>
+            </div>
+            <form onSubmit={handleSubmit} className="px-6 py-4">
               <div className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="Event title"
-                  value={formData.title}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
-                  }
-                  className="w-full p-2 border rounded"
-                  required
-                />
-                <textarea
-                  placeholder="Description (optional)"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  className="w-full p-2 border rounded"
-                  rows={3}
-                />
-                <input
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) =>
-                    setFormData({ ...formData, date: e.target.value })
-                  }
-                  className="w-full p-2 border rounded"
-                  required
-                />
-                <input
-                  type="time"
-                  value={formData.time}
-                  onChange={(e) =>
-                    setFormData({ ...formData, time: e.target.value })
-                  }
-                  className="w-full p-2 border rounded"
-                  required
-                />
-                <select
-                  value={formData.category}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      category: e.target.value as CalendarEvent["category"],
-                    })
-                  }
-                  className="w-full p-2 border rounded"
-                >
-                  <option value="meeting">Meeting</option>
-                  <option value="deadline">Deadline</option>
-                  <option value="personal">Personal</option>
-                  <option value="other">Other</option>
-                </select>
+                <div>
+                  <label
+                    htmlFor="title"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Event Title
+                  </label>
+                  <input
+                    id="title"
+                    type="text"
+                    placeholder="Enter event title"
+                    value={formData.title}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
+                    required
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="description"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Description (Optional)
+                  </label>
+                  <textarea
+                    id="description"
+                    placeholder="Enter event description"
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="datetime"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Date & Time
+                  </label>
+                  <input
+                    id="datetime"
+                    type="datetime-local"
+                    value={formData.datetime}
+                    onChange={(e) =>
+                      setFormData({ ...formData, datetime: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
+                    required
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="category"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Category
+                  </label>
+                  <select
+                    id="category"
+                    value={formData.category}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        category: e.target.value as CalendarEvent["category"],
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black bg-white"
+                  >
+                    <option value="meeting">Meeting</option>
+                    <option value="deadline">Deadline</option>
+                    <option value="personal">Personal</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
               </div>
-              <div className="flex justify-end space-x-2 mt-6">
+              <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 mt-6 pt-4 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                  className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full sm:w-auto"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full sm:w-auto"
                 >
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
                   Add Event
                 </button>
               </div>
@@ -136,44 +511,6 @@ export default function Calendar() {
           </div>
         </div>
       )}
-
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-lg font-semibold mb-4">All Events</h2>
-        {events.length === 0 ? (
-          <p className="text-gray-500">No events scheduled</p>
-        ) : (
-          <div className="space-y-3">
-            {events.map((event) => (
-              <div
-                key={event.id}
-                className="border-l-4 border-blue-500 pl-4 py-2"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-medium">{event.title}</h3>
-                    <p className="text-sm text-gray-600">
-                      {formatEventDate(event.date)} at {event.time}
-                    </p>
-                    {event.description && (
-                      <p className="text-sm text-gray-500 mt-1">
-                        {event.description}
-                      </p>
-                    )}
-                  </div>
-                  {canEdit && (
-                    <button
-                      onClick={() => deleteEvent(event.id)}
-                      className="text-red-500 hover:text-red-700 text-sm"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

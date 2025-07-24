@@ -41,7 +41,13 @@ export default async function handler(
       const client = await clientPromise;
       const db = client.db("meraki");
 
-      const event = { ...req.body, date: new Date(req.body.date) };
+      const event = {
+        ...req.body,
+        date: new Date(req.body.datetime || req.body.date),
+      };
+      // Remove datetime field if it exists since we store as date
+      delete event.datetime;
+
       const result = await db.collection("calendar").insertOne(event);
 
       return res.status(201).json({ ...event, _id: result.insertedId });
@@ -55,14 +61,16 @@ export default async function handler(
     try {
       const client = await clientPromise;
       const db = client.db("meraki");
-      const { _id, ...updateData } = req.body;
+      const { _id, datetime, ...updateData } = req.body;
+
+      const updatePayload = {
+        ...updateData,
+        date: new Date(datetime || updateData.date),
+      };
 
       await db
         .collection("calendar")
-        .updateOne(
-          { _id: new ObjectId(_id) },
-          { $set: { ...updateData, date: new Date(updateData.date) } }
-        );
+        .updateOne({ _id: new ObjectId(_id) }, { $set: updatePayload });
 
       return res.status(200).json({ message: "Event updated successfully" });
     } catch (error) {
