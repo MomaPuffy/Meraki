@@ -3,6 +3,8 @@ import "../app/globals.css";
 import type { AppProps } from "next/app";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
+import Footer from "@/app/components/footer/Footer";
+import { CalendarProvider } from "../contexts/CalendarContext";
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
@@ -28,11 +30,14 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 export default function MyApp({ Component, pageProps }: AppProps) {
   return (
     <SessionProvider session={pageProps.session}>
-      <AuthGuard>
-        <div className="min-h-screen bg-gray-100 text-black">
-          <Component {...pageProps} />
-        </div>
-      </AuthGuard>
+      <CalendarProvider>
+        <AuthGuard>
+          <div className="min-h-screen bg-gray-100 text-black">
+            <Component {...pageProps} />
+            <Footer />
+          </div>
+        </AuthGuard>
+      </CalendarProvider>
     </SessionProvider>
   );
 }

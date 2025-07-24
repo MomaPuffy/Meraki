@@ -1,4 +1,9 @@
-import NextAuth, { type NextAuthOptions, type User, type Account, type Profile } from "next-auth";
+import NextAuth, {
+  type NextAuthOptions,
+  type User,
+  type Account,
+  type Profile,
+} from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import clientPromise from "../../../lib/mongodb";
@@ -15,7 +20,24 @@ declare module "next-auth" {
       name?: string | null;
       email?: string | null;
       image?: string | null;
+      position?: string;
     };
+  }
+
+  interface User {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    position?: string;
+  }
+}
+
+// Add this type declaration
+declare module "next-auth/jwt" {
+  interface JWT {
+    id?: string;
+    position?: string;
   }
 }
 
@@ -29,7 +51,7 @@ export const authOptions: NextAuthOptions = {
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -39,23 +61,32 @@ export const authOptions: NextAuthOptions = {
         try {
           const client = await clientPromise;
           const db = client.db("meraki");
-          const user = await db.collection("users").findOne({ email: credentials.email });
+          const user = await db
+            .collection("users")
+            .findOne({ email: credentials.email });
 
           if (!user) {
             return null;
           }
 
           // Check if user signed up with Google
-          if (user.provider === 'google') {
-            throw new Error('This email is associated with a Google account. Please sign in with Google.');
+          if (user.provider === "google") {
+            throw new Error(
+              "This email is associated with a Google account. Please sign in with Google."
+            );
           }
 
           // Check if user has a password (credentials-based account)
           if (!user.password) {
-            throw new Error('This account was created with Google. Please sign in with Google.');
+            throw new Error(
+              "This account was created with Google. Please sign in with Google."
+            );
           }
 
-          const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+          const isPasswordValid = await bcrypt.compare(
+            credentials.password,
+            user.password
+          );
 
           if (!isPasswordValid) {
             return null;
@@ -65,13 +96,14 @@ export const authOptions: NextAuthOptions = {
             id: user._id.toString(),
             email: user.email,
             name: user.name,
+            position: user.position || "Member",
           };
         } catch (error) {
           console.error("Authentication error:", error);
           return null;
         }
-      }
-    })
+      },
+    }),
   ],
   pages: {
     signIn: "/login",
@@ -85,18 +117,27 @@ export const authOptions: NextAuthOptions = {
     maxAge: parseInt(process.env.JWT_MAX_AGE!) || 24 * 60 * 60, // 24 hours (in seconds)
   },
   callbacks: {
-    async signIn({ user, account }: { user: User; account: Account | null; profile?: Profile }) {
+    async signIn({
+      user,
+      account,
+    }: {
+      user: User;
+      account: Account | null;
+      profile?: Profile;
+    }) {
       if (account?.provider === "google") {
         try {
           const client = await clientPromise;
           const db = client.db("meraki");
-          
+
           // Check if user already exists in database
-          const existingUser = await db.collection("users").findOne({ email: user.email });
-          
+          let existingUser = await db
+            .collection("users")
+            .findOne({ email: user.email });
+
           if (!existingUser) {
             // Add Google user to database
-            await db.collection("users").insertOne({
+            const newUser = {
               email: user.email,
               name: user.name,
               image: user.image,
@@ -105,8 +146,16 @@ export const authOptions: NextAuthOptions = {
               position: "Member",
               color: getUserColorKey("Member", "Unassigned"),
               createdAt: new Date(),
-            });
+            };
+            const result = await db.collection("users").insertOne(newUser);
+            existingUser = await db
+              .collection("users")
+              .findOne({ _id: result.insertedId });
           }
+
+          // Add position and id to user object for the JWT callback
+          user.position = existingUser?.position;
+          user.id = existingUser?._id?.toString() || user.id;
         } catch (error) {
           console.error("Error adding Google user to database:", error);
           return false;
@@ -117,26 +166,30 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }: { token: JWT; user?: User }) {
       if (user) {
         token.id = user.id;
-        // For Google users, we need to get the database ID
-        if (!token.id && token.email) {
-          try {
-            const client = await clientPromise;
-            const db = client.db("meraki");
-            const dbUser = await db.collection("users").findOne({ email: token.email });
-            if (dbUser) {
-              token.id = dbUser._id.toString();
-            }
-          } catch (error) {
-            console.error("Error fetching user ID:", error);
+        token.position = user.position;
+      } else if (!token.position && token.email) {
+        // Fallback: fetch position from database if not in token
+        try {
+          const client = await clientPromise;
+          const db = client.db("meraki");
+          const dbUser = await db
+            .collection("users")
+            .findOne({ email: token.email });
+          if (dbUser) {
+            token.id = dbUser._id.toString();
+            token.position = dbUser.position;
           }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
         }
       }
-      
+
       return token;
     },
     async session({ session, token }: { session: Session; token: JWT }) {
       if (token && session.user) {
         session.user.id = token.id as string;
+        session.user.position = token.position; // Add position to session
       }
       return session;
     },

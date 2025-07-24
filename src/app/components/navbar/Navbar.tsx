@@ -4,43 +4,16 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession, signIn, signOut } from "next-auth/react";
-
-interface UserProfile {
-  position?: string;
-}
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
+  const { isAdmin } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const mobileButtonRef = useRef<HTMLButtonElement>(null);
-
-  // Check if user has admin privileges
-  const isAdmin = (position?: string) => {
-    const adminPositions = ["advisor", "president", "vice-president"];
-    return adminPositions.includes(position?.toLowerCase() || "");
-  };
-
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      if (session) {
-        try {
-          const response = await fetch("/api/profile");
-          const data = await response.json();
-          if (response.ok) {
-            setUserProfile(data.user);
-          }
-        } catch (error) {
-          console.error("Failed to fetch user profile:", error);
-        }
-      }
-    };
-
-    fetchUserProfile();
-  }, [session]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -59,6 +32,12 @@ export default function Navbar() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    console.log("Navbar mounted, session status:", status);
+    console.log("Session data:", session);
+    console.log("Is admin:", isAdmin);
+  }, [session, status, isAdmin]);
 
   return (
     <nav className="flex w-full h-15 bg-[#252525] sticky top-0 z-50">
@@ -92,7 +71,15 @@ export default function Navbar() {
               Attendance
             </Link>
           </li>
-          {isAdmin(userProfile?.position) && (
+          <li>
+            <Link
+              href="/chat"
+              className="hover:border-b-white hover:border-b-1 px-2 py-1"
+            >
+              Chat
+            </Link>
+          </li>
+          {isAdmin && (
             <li>
               <Link
                 href="/admin"
@@ -245,17 +232,15 @@ export default function Navbar() {
                 Attendance
               </Link>
             </li>
-            {isAdmin(userProfile?.position) && (
-              <li>
-                <Link
-                  href="/admin"
-                  className="block px-4 py-3 hover:bg-[#424242] transition-colors"
-                  onClick={() => setShowMobileMenu(false)}
-                >
-                  Admin
-                </Link>
-              </li>
-            )}
+            <li>
+              <Link
+                href="/chat"
+                className="block px-4 py-3 hover:bg-[#424242] transition-colors"
+                onClick={() => setShowMobileMenu(false)}
+              >
+                Chat
+              </Link>
+            </li>
             <li>
               <Link
                 href="https://docs.google.com/spreadsheets/d/1BLdK3ry7XJymGRWiVIefZ1kdpxpWy-2XajthgD9ItPg"
