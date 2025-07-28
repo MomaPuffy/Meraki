@@ -7,11 +7,7 @@ import {
   getSignedImageUrl,
   getSignedThumbnailUrl,
 } from "../../lib/cloudinary";
-import {
-  getPHTDate,
-  getPHTDateString,
-  getPHTTimeString,
-} from "../../utils/dateUtils";
+import { getPHTDateString, getPHTTimeString } from "../../utils/dateUtils";
 
 export default async function handler(
   req: NextApiRequest,

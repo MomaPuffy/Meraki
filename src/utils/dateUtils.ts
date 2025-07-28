@@ -42,10 +42,7 @@ export const getPHTDateString = () => {
   return getPHTDate().toISOString().split("T")[0]; // YYYY-MM-DD format in PHT
 };
 
-export const formatTimeForDisplay = (
-  dateString: string,
-  useLocalTime: boolean = true
-) => {
+export const formatTimeForDisplay = (dateString: string) => {
   const date = new Date(dateString);
   // Display in PHT
   return date.toLocaleTimeString("en-US", {
