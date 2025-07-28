@@ -7,6 +7,7 @@ import {
   getSignedImageUrl,
   getSignedThumbnailUrl,
 } from "../../lib/cloudinary";
+import { getPHTDate, getPHTDateString } from "../../utils/dateUtils";
 
 export default async function handler(
   req: NextApiRequest,
@@ -74,7 +75,8 @@ export default async function handler(
       const client = await clientPromise;
       const db = client.db("meraki");
 
-      const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
+      const today = getPHTDateString(); // Use PHT date string
+      const currentPHTTime = getPHTDate(); // Use PHT timestamp
 
       // Upload image to Cloudinary if provided
       let imageData = null;
@@ -113,9 +115,9 @@ export default async function handler(
           userName: session.user.name,
           userEmail: session.user.email,
           date: today,
-          timeIn: new Date(),
+          timeIn: currentPHTTime,
           timeInImage: imageData,
-          createdAt: new Date(),
+          createdAt: currentPHTTime,
         };
 
         await db.collection("attendance").insertOne(newRecord);
@@ -135,19 +137,17 @@ export default async function handler(
           },
           {
             $set: {
-              timeOut: new Date(),
+              timeOut: currentPHTTime,
               timeOutImage: imageData,
-              updatedAt: new Date(),
+              updatedAt: currentPHTTime,
             },
           }
         );
 
         if (updateResult.matchedCount === 0) {
-          return res
-            .status(400)
-            .json({
-              error: "No time-in record found for today or already timed out",
-            });
+          return res.status(400).json({
+            error: "No time-in record found for today or already timed out",
+          });
         }
 
         return res.status(200).json({ message: "Timed out successfully" });

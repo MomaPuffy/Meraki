@@ -3,6 +3,11 @@ import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Navbar from "../app/components/navbar/Navbar";
 import { getUserColorTheme } from "../lib/colorConfig";
+import {
+  formatTimeForDisplay,
+  formatDateForDisplay,
+  getPHTDateString,
+} from "../utils/dateUtils";
 
 interface AttendanceRecord {
   _id: string;
@@ -183,23 +188,15 @@ export default function Attendance() {
   };
 
   const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
+    return formatTimeForDisplay(dateString, true); // Use local time for display
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    return formatDateForDisplay(dateString, true); // Use local time for display
   };
 
   const getTodayRecord = () => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getPHTDateString(); // Use PHT date for comparison
     return attendanceRecords.find((record) => record.date === today);
   };
 
