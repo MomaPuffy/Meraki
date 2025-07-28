@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Navbar from "../app/components/navbar/Navbar";
 import { getUserColorTheme } from "../lib/colorConfig";
+import { formatTimeForDisplay, formatDateForDisplay } from "../utils/dateUtils";
 
 interface UserData {
   id: string;
@@ -112,6 +113,16 @@ export default function Admin() {
     } finally {
       setResetLoading(null);
     }
+  };
+
+  // Helper function to format time in PHT
+  const formatTime = (dateString: string) => {
+    return formatTimeForDisplay(dateString);
+  };
+
+  // Helper function to format date in PHT
+  const formatDate = (dateString: string) => {
+    return formatDateForDisplay(dateString, false);
   };
 
   // Filter users based on search and filters
@@ -410,24 +421,12 @@ export default function Admin() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {user.timeInToday
-                                ? new Date(user.timeInToday).toLocaleTimeString(
-                                    [],
-                                    {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    }
-                                  )
+                                ? formatTime(user.timeInToday)
                                 : "-"}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {user.timeOutToday ? (
-                                new Date(user.timeOutToday).toLocaleTimeString(
-                                  [],
-                                  {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  }
-                                )
+                                formatTime(user.timeOutToday)
                               ) : user.lastLoginToday ? (
                                 <span className="text-orange-600 font-medium">
                                   Still Active
@@ -438,9 +437,7 @@ export default function Admin() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {user.lastLoginTime
-                                ? new Date(
-                                    user.lastLoginTime
-                                  ).toLocaleDateString()
+                                ? formatDate(user.lastLoginTime)
                                 : "Never"}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

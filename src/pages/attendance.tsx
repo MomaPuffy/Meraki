@@ -188,11 +188,11 @@ export default function Attendance() {
   };
 
   const formatTime = (dateString: string) => {
-    return formatTimeForDisplay(dateString); // Always use PHT for display
+    return formatTimeForDisplay(dateString); // Always uses PHT
   };
 
   const formatDate = (dateString: string) => {
-    return formatDateForDisplay(dateString); // Always use PHT for display
+    return formatDateForDisplay(dateString, false); // Explicitly use PHT
   };
 
   const getTodayRecord = () => {

@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import clientPromise from "../../../lib/mongodb";
+import { getPHTDateString } from "../../../utils/dateUtils";
 
 export default async function handler(
   req: NextApiRequest,
@@ -43,11 +44,8 @@ export default async function handler(
         .json({ message: "Access denied. Admin privileges required." });
     }
 
-    // Get today's date for login comparison
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // Get today's date in PHT for comparison
+    const todayPHT = getPHTDateString();
 
     // Fetch all users
     const users = await db.collection("users").find({}).toArray();
@@ -56,10 +54,7 @@ export default async function handler(
     const attendanceRecords = await db
       .collection("attendance")
       .find({
-        createdAt: {
-          $gte: today,
-          $lt: tomorrow,
-        },
+        date: todayPHT,
       })
       .toArray();
 
@@ -68,7 +63,7 @@ export default async function handler(
     attendanceRecords.forEach((record) => {
       if (!todayAttendanceMap.has(record.userEmail)) {
         todayAttendanceMap.set(record.userEmail, {
-          timeIn: record.createdAt,
+          timeIn: record.timeIn,
           timeOut: record.timeOut || null,
         });
       } else {

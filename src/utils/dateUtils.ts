@@ -44,7 +44,7 @@ export const getPHTDateString = () => {
 
 export const formatTimeForDisplay = (dateString: string) => {
   const date = new Date(dateString);
-  // Display in PHT
+  // Always display in PHT
   return date.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
@@ -55,7 +55,7 @@ export const formatTimeForDisplay = (dateString: string) => {
 
 export const formatDateForDisplay = (
   dateString: string,
-  useLocalTime: boolean = true
+  useLocalTime: boolean = false
 ) => {
   const date = new Date(dateString);
   if (useLocalTime) {
@@ -66,7 +66,7 @@ export const formatDateForDisplay = (
       day: "numeric",
     });
   } else {
-    // Display in PHT
+    // Display in PHT (default)
     return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
