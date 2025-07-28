@@ -7,7 +7,11 @@ import {
   getSignedImageUrl,
   getSignedThumbnailUrl,
 } from "../../lib/cloudinary";
-import { getPHTDate, getPHTDateString } from "../../utils/dateUtils";
+import {
+  getPHTDate,
+  getPHTDateString,
+  getPHTTimeString,
+} from "../../utils/dateUtils";
 
 export default async function handler(
   req: NextApiRequest,
@@ -76,7 +80,7 @@ export default async function handler(
       const db = client.db("meraki");
 
       const today = getPHTDateString(); // Use PHT date string
-      const currentPHTTime = getPHTDate(); // Use PHT timestamp
+      const currentPHTTimeString = getPHTTimeString(); // Use PHT time as ISO string
 
       // Upload image to Cloudinary if provided
       let imageData = null;
@@ -115,9 +119,9 @@ export default async function handler(
           userName: session.user.name,
           userEmail: session.user.email,
           date: today,
-          timeIn: currentPHTTime,
+          timeIn: currentPHTTimeString,
           timeInImage: imageData,
-          createdAt: currentPHTTime,
+          createdAt: currentPHTTimeString,
         };
 
         await db.collection("attendance").insertOne(newRecord);
@@ -137,9 +141,9 @@ export default async function handler(
           },
           {
             $set: {
-              timeOut: currentPHTTime,
+              timeOut: currentPHTTimeString,
               timeOutImage: imageData,
-              updatedAt: currentPHTTime,
+              updatedAt: currentPHTTimeString,
             },
           }
         );
