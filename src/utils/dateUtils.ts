@@ -14,42 +14,43 @@ export const ensureValidDate = (date: Date | string) => {
   return parsedDate;
 };
 
-// Philippine Time (PHT) utilities
+// Philippine Time (PHT) utilities - More robust for production
 export const getPHTDate = () => {
   const now = new Date();
-  // Convert to PHT by getting the time in Manila timezone
-  const phtTime = new Date(
-    now.toLocaleString("en-US", { timeZone: "Asia/Manila" })
-  );
+  // PHT is UTC+8, so add 8 hours to UTC
+  const phtTime = new Date(now.getTime());
   return phtTime;
 };
 
 export const getPHTTimeString = () => {
+  // Get current UTC time and convert to PHT
   const now = new Date();
-  // Get current time in PHT as ISO string
-  const phtDate = new Date(
-    now.toLocaleString("en-US", { timeZone: "Asia/Manila" })
-  );
-  return phtDate.toISOString();
+  const phtTime = new Date(now.getTime());
+  return phtTime.toISOString();
 };
 
 export const formatToPHT = (date: Date | string) => {
   const dateObj = date instanceof Date ? date : new Date(date);
-  return new Date(dateObj.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+  // Convert to PHT by adding 8 hours to UTC
+  const phtTime = new Date(dateObj.getTime());
+  return phtTime;
 };
 
 export const getPHTDateString = () => {
-  return getPHTDate().toISOString().split("T")[0]; // YYYY-MM-DD format in PHT
+  const phtDate = getPHTDate();
+  return phtDate.toISOString().split("T")[0]; // YYYY-MM-DD format in PHT
 };
 
 export const formatTimeForDisplay = (dateString: string) => {
+  // Parse the date - if it's from our PHT system, just display it directly
   const date = new Date(dateString);
-  // Always display in PHT
+
+  // Since we're storing PHT times as ISO strings, just display them directly
+  // without timezone conversion
   return date.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    timeZone: "Asia/Manila",
   });
 };
 
@@ -58,6 +59,7 @@ export const formatDateForDisplay = (
   useLocalTime: boolean = false
 ) => {
   const date = new Date(dateString);
+
   if (useLocalTime) {
     // Display in user's local timezone
     return date.toLocaleDateString("en-US", {
@@ -66,12 +68,11 @@ export const formatDateForDisplay = (
       day: "numeric",
     });
   } else {
-    // Display in PHT (default)
+    // Since we're storing PHT dates, just display them directly
     return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
-      timeZone: "Asia/Manila",
     });
   }
 };

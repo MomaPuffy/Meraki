@@ -82,7 +82,21 @@ export default async function handler(
         {
           $group: {
             _id: "$userEmail",
-            lastLoginTime: { $max: "$createdAt" },
+            lastLoginTime: {
+              $max: {
+                $cond: {
+                  if: { $type: "$createdAt" },
+                  then: {
+                    $cond: {
+                      if: { $eq: [{ $type: "$createdAt" }, "date"] },
+                      then: "$createdAt",
+                      else: { $dateFromString: { dateString: "$createdAt" } },
+                    },
+                  },
+                  else: null,
+                },
+              },
+            },
           },
         },
       ])
