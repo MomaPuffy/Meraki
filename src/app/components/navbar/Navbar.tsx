@@ -241,6 +241,17 @@ export default function Navbar() {
                 Chat
               </Link>
             </li>
+            {isAdmin && (
+              <li>
+                <Link
+                  href="/admin"
+                  className="block px-4 py-3 hover:bg-[#424242] transition-colors"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  Admin
+                </Link>
+              </li>
+            )}
             <li>
               <Link
                 href="https://docs.google.com/spreadsheets/d/1BLdK3ry7XJymGRWiVIefZ1kdpxpWy-2XajthgD9ItPg"
