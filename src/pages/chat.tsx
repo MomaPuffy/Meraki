@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import Navbar from "../app/components/navbar/Navbar";
-import { ChatContainer } from "../app/components/chat/ChatContainer";
+import Navbar from "@/app/components/navbar/Navbar";
+import { ChatContainer } from "@/app/components/chat/ChatContainer";
 
 interface Chat {
   _id: string;

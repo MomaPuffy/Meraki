@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
-import clientPromise from "../../../lib/mongodb";
-import { getPHTDateString } from "../../../utils/dateUtils";
+import clientPromise from "@/lib/mongodb";
+import { getPHTDateString } from "@/utils/dateUtils";
 
 export default async function handler(
   req: NextApiRequest,

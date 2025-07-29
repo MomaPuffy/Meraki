@@ -1,13 +1,13 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth";
 import { authOptions } from "./auth/[...nextauth]";
-import clientPromise from "../../lib/mongodb";
+import clientPromise from "@/lib/mongodb";
 import {
   uploadImage,
   getSignedImageUrl,
   getSignedThumbnailUrl,
-} from "../../lib/cloudinary";
-import { getPHTDateString, getPHTTimeString } from "../../utils/dateUtils";
+} from "@/lib/cloudinary";
+import { getPHTDateString, getPHTTimeString } from "@/utils/dateUtils";
 
 export default async function handler(
   req: NextApiRequest,

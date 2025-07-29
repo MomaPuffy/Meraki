@@ -1,10 +1,10 @@
 import { SessionProvider, useSession } from "next-auth/react";
-import "../app/globals.css";
+import "@/app/globals.css";
 import type { AppProps } from "next/app";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import Footer from "@/app/components/footer/Footer";
-import { CalendarProvider } from "../contexts/CalendarContext";
+import { CalendarProvider } from "@/contexts/CalendarContext";
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();

@@ -6,11 +6,11 @@ import NextAuth, {
 } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-import clientPromise from "../../../lib/mongodb";
+import clientPromise from "@/lib/mongodb";
 import bcrypt from "bcryptjs";
 import { JWT } from "next-auth/jwt";
 import { Session } from "next-auth";
-import { getUserColorKey } from "../../../lib/colorConfig";
+import { getUserColorKey } from "@/lib/colorConfig";
 
 // Extend the built-in session types
 declare module "next-auth" {

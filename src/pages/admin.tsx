@@ -1,9 +1,9 @@
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import Navbar from "../app/components/navbar/Navbar";
-import { getUserColorTheme } from "../lib/colorConfig";
-import { formatTimeForDisplay, formatDateForDisplay } from "../utils/dateUtils";
+import Navbar from "@/app/components/navbar/Navbar";
+import { getUserColorTheme } from "@/lib/colorConfig";
+import { formatTimeForDisplay, formatDateForDisplay } from "@/utils/dateUtils";
 
 interface UserData {
   id: string;
@@ -21,6 +21,39 @@ interface UserData {
   timeOutToday?: string;
 }
 
+interface AttendanceRecord {
+  _id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  date: string;
+  timeIn?: string;
+  timeOut?: string;
+  timeInImage?: {
+    url: string;
+    thumbnail: string;
+    public_id: string;
+  };
+  timeOutImage?: {
+    url: string;
+    thumbnail: string;
+    public_id: string;
+  };
+  createdAt: string;
+  updatedAt?: string;
+}
+
+interface UserAttendanceModalData {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    department?: string;
+    position?: string;
+  };
+  attendance: AttendanceRecord[];
+}
+
 export default function Admin() {
   const { data: session, status } = useSession();
   const [users, setUsers] = useState<UserData[]>([]);
@@ -32,6 +65,10 @@ export default function Admin() {
   const [positionFilter, setPositionFilter] = useState("");
   const [resetLoading, setResetLoading] = useState<string | null>(null);
   const [resetMessage, setResetMessage] = useState("");
+  const [selectedUser, setSelectedUser] =
+    useState<UserAttendanceModalData | null>(null);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   // Check if user has admin privileges
   const isAdmin = (position?: string) => {
@@ -113,6 +150,37 @@ export default function Admin() {
     } finally {
       setResetLoading(null);
     }
+  };
+
+  const handleUserRowClick = async (user: UserData) => {
+    setModalLoading(true);
+    setShowModal(true);
+    setSelectedUser(null);
+
+    try {
+      const response = await fetch(
+        `/api/admin/user-attendance?userId=${user.id}`
+      );
+      const data = await response.json();
+
+      if (response.ok) {
+        setSelectedUser(data);
+      } else {
+        setError(data.message || "Failed to fetch user attendance");
+        setShowModal(false);
+      }
+    } catch (err) {
+      console.error("Failed to fetch user attendance:", err);
+      setError("Failed to fetch user attendance");
+      setShowModal(false);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedUser(null);
   };
 
   // Helper function to format time in PHT
@@ -208,6 +276,11 @@ export default function Admin() {
   const userColors = getUserColorTheme(
     currentUser?.position,
     currentUser?.department
+  );
+
+  const selectedUserColors = getUserColorTheme(
+    selectedUser?.user.position,
+    selectedUser?.user.department
   );
 
   return (
@@ -367,7 +440,11 @@ export default function Admin() {
                           user.department
                         );
                         return (
-                          <tr key={user.id} className="hover:bg-gray-50">
+                          <tr
+                            key={user.id}
+                            className="hover:bg-gray-50 cursor-pointer"
+                            onClick={() => handleUserRowClick(user)}
+                          >
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
                                 <div className="flex-shrink-0 h-10 w-10">
@@ -442,9 +519,10 @@ export default function Admin() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                               <button
-                                onClick={() =>
-                                  handleResetPassword(user.id, user.email)
-                                }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleResetPassword(user.id, user.email);
+                                }}
                                 disabled={resetLoading === user.id}
                                 className="text-orange-600 hover:text-orange-900 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
@@ -472,6 +550,177 @@ export default function Admin() {
           </div>
         </div>
       </div>
+
+      {/* User Attendance Modal */}
+      {showModal && (
+        <div className="fixed inset-0 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div
+              className={`flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r ${selectedUserColors.headerFrom} ${selectedUserColors.headerTo}`}
+            >
+              <h2 className="text-xl font-semibold text-white">
+                {selectedUser
+                  ? `${selectedUser.user.name}'s Attendance Log`
+                  : "Loading..."}
+              </h2>
+              <button
+                onClick={closeModal}
+                className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+              >
+                X
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {modalLoading ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-gray-600">
+                    Loading attendance records...
+                  </span>
+                </div>
+              ) : selectedUser ? (
+                <>
+                  {/* User Info */}
+                  <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-500">Name</p>
+                        <p className="font-medium">{selectedUser.user.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Email</p>
+                        <p className="font-medium">{selectedUser.user.email}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Department</p>
+                        <p className="font-medium">
+                          {selectedUser.user.department || "Unassigned"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Position</p>
+                        <p className="font-medium">
+                          {selectedUser.user.position || "Member"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Attendance Records */}
+                  {selectedUser.attendance.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>No attendance records found for this user.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Date
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Time In
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Time Out
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Photos
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Status
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {selectedUser.attendance.map((record) => (
+                            <tr key={record._id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {formatDate(record.date)}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {record.timeIn
+                                  ? formatTime(record.timeIn)
+                                  : "-"}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {record.timeOut
+                                  ? formatTime(record.timeOut)
+                                  : "-"}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <div className="flex gap-2">
+                                  {record.timeInImage && (
+                                    <Image
+                                      src={record.timeInImage.thumbnail}
+                                      alt="Time In Photo"
+                                      width={48}
+                                      height={48}
+                                      className="rounded-lg object-cover cursor-pointer border-2 border-green-200"
+                                      onClick={() =>
+                                        window.open(
+                                          record.timeInImage!.url,
+                                          "_blank"
+                                        )
+                                      }
+                                      title="Click to view Time In photo"
+                                    />
+                                  )}
+                                  {record.timeOutImage && (
+                                    <Image
+                                      src={record.timeOutImage.thumbnail}
+                                      alt="Time Out Photo"
+                                      width={48}
+                                      height={48}
+                                      className="rounded-lg object-cover cursor-pointer border-2 border-red-200"
+                                      onClick={() =>
+                                        window.open(
+                                          record.timeOutImage!.url,
+                                          "_blank"
+                                        )
+                                      }
+                                      title="Click to view Time Out photo"
+                                    />
+                                  )}
+                                  {!record.timeInImage &&
+                                    !record.timeOutImage && (
+                                      <span className="text-gray-400 text-xs">
+                                        No photos
+                                      </span>
+                                    )}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span
+                                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                    record.timeOut
+                                      ? "bg-green-100 text-green-800"
+                                      : record.timeIn
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : "bg-gray-100 text-gray-800"
+                                  }`}
+                                >
+                                  {record.timeOut
+                                    ? "Complete"
+                                    : record.timeIn
+                                    ? "In Progress"
+                                    : "Incomplete"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

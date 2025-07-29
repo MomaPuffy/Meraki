@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { CalendarProvider } from "../contexts/CalendarContext";
+import { CalendarProvider } from "@/contexts/CalendarContext";
 
 export const metadata: Metadata = {
   title: "Meraki",

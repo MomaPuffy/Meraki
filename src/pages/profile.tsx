@@ -1,8 +1,8 @@
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import Navbar from "../app/components/navbar/Navbar";
-import { getUserColorTheme } from "../lib/colorConfig";
+import Navbar from "@/app/components/navbar/Navbar";
+import { getUserColorTheme } from "@/lib/colorConfig";
 
 interface UserProfile {
   id: string;

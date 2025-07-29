@@ -1,5 +1,5 @@
 import { useSession } from "next-auth/react";
-import { isAdminPosition } from "../utils/adminRoles";
+import { isAdminPosition } from "@/utils/adminRoles";
 
 export function useAuth() {
   const { data: session, status } = useSession();

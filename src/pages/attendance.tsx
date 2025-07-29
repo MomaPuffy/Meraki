@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
-import Navbar from "../app/components/navbar/Navbar";
-import { getUserColorTheme } from "../lib/colorConfig";
+import Navbar from "@/app/components/navbar/Navbar";
+import { getUserColorTheme } from "@/lib/colorConfig";
 import {
   formatTimeForDisplay,
   formatDateForDisplay,
   getPHTDateString,
-} from "../utils/dateUtils";
+} from "@/utils/dateUtils";
 
 interface AttendanceRecord {
   _id: string;

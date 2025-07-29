@@ -7,7 +7,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { CalendarEvent } from "../types/event";
+import { CalendarEvent } from "@/types/event";
 import { useAuth } from "@/hooks/useAuth";
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";

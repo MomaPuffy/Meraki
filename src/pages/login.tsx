@@ -1,4 +1,4 @@
-import Navbar from "../app/components/navbar/Navbar";
+import Navbar from "@/app/components/navbar/Navbar";
 import { signIn } from "next-auth/react";
 import Image from "next/image";
 import { useState } from "react";

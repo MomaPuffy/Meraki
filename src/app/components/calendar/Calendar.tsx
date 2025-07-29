@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useCalendar } from "../../../contexts/CalendarContext";
-import { CalendarEvent, EventFormData } from "../../../types/event";
-import { getUserColorTheme } from "../../../lib/colorConfig";
+import { useCalendar } from "@/contexts/CalendarContext";
+import { CalendarEvent, EventFormData } from "@/types/event";
+import { getUserColorTheme } from "@/lib/colorConfig";
 
 interface UserProfile {
   position?: string;

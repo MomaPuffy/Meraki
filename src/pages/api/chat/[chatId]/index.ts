@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]";
-import clientPromise from "../../../../lib/mongodb";
+import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 
 export default async function handler(
@@ -70,11 +70,9 @@ export default async function handler(
       const messageContent = content || text; // Support both field names
 
       if (!messageContent || !userId || !userName) {
-        return res
-          .status(400)
-          .json({
-            error: "Missing required fields: content, userId, userName",
-          });
+        return res.status(400).json({
+          error: "Missing required fields: content, userId, userName",
+        });
       }
 
       // Verify user has access to this chat

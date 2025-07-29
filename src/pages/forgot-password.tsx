@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Link from "next/link";
-import Navbar from "../app/components/navbar/Navbar";
+import Navbar from "@/app/components/navbar/Navbar";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");

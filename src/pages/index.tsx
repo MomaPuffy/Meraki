@@ -1,9 +1,9 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import Navbar from "../app/components/navbar/Navbar";
+import Navbar from "@/app/components/navbar/Navbar";
 import Image from "next/image";
-import ChatWidget from "../app/components/chat/ChatWidget";
+import ChatWidget from "@/app/components/chat/ChatWidget";
 import UpcomingEvents from "@/app/components/calendar/UpcomingEvents";
 
 export default function Home() {
