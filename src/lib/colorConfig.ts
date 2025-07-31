@@ -1,12 +1,5 @@
 // Centralized color configuration for user positions and departments
-export interface ColorTheme {
-  headerFrom: string;
-  headerTo: string;
-  badgeBg: string;
-  badgeText: string;
-  borderColor: string;
-  accentColor: string;
-}
+import { ColorTheme } from "@/types/theme";
 
 export const COLOR_THEMES = {
   green: {

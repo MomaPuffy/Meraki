@@ -1,10 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Message } from "@/types/chat";
-
-interface MessageListProps {
-  messages: Message[];
-  currentUserId?: string;
-}
+import { MessageListProps } from "@/types/chat";
 
 export const MessageList: React.FC<MessageListProps> = ({
   messages,
@@ -20,7 +15,7 @@ export const MessageList: React.FC<MessageListProps> = ({
     scrollToBottom();
   }, [messages]);
 
-  const formatTime = (timestamp: Date) => {
+  const formatTime = (timestamp: Date | string) => {
     return new Date(timestamp).toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",

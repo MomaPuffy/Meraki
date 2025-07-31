@@ -8,29 +8,10 @@ import React, {
   useCallback,
 } from "react";
 import { CalendarEvent } from "@/types/event";
+import { RawEventData, CalendarContextType } from "@/types/calendar";
 import { useAuth } from "@/hooks/useAuth";
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
-
-interface RawEventData {
-  _id: string;
-  title: string;
-  description?: string;
-  date: string;
-  time?: string;
-  location?: string;
-  type?: string;
-}
-
-interface CalendarContextType {
-  events: CalendarEvent[];
-  addEvent: (event: Omit<CalendarEvent, "id">) => void;
-  updateEvent: (id: string, event: Partial<CalendarEvent>) => void;
-  deleteEvent: (id: string) => void;
-  getUpcomingEvents: (days?: number) => CalendarEvent[];
-  canEdit: boolean;
-  isLoading: boolean;
-}
 
 const CalendarContext = createContext<CalendarContextType | undefined>(
   undefined

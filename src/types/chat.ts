@@ -1,3 +1,5 @@
+import { User } from './user';
+
 export interface Message {
   id: string;
   _id?: string;
@@ -30,17 +32,27 @@ export interface Chat {
   updatedAt: Date;
 }
 
-export interface User {
-  id: string;
-  name: string;
-  avatar?: string;
-  isOnline: boolean;
-}
-
 export interface ChatState {
   messages: Message[];
   currentChat: Chat | null;
   users: User[];
   isLoading: boolean;
   error: string | null;
+}
+
+export interface ChatContainerProps {
+  chatId: string;
+  currentUserId: string;
+  currentUserName: string;
+}
+
+export interface MessageInputProps {
+  onSendMessage: (content: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+}
+
+export interface MessageListProps {
+  messages: Message[];
+  currentUserId?: string;
 }

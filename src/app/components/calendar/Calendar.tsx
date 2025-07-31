@@ -4,18 +4,14 @@ import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useCalendar } from "@/contexts/CalendarContext";
 import { CalendarEvent, EventFormData } from "@/types/event";
+import { UserData } from "@/types";
 import { getUserColorTheme } from "@/lib/colorConfig";
-
-interface UserProfile {
-  position?: string;
-  department?: string;
-}
 
 export default function Calendar() {
   const { data: session, status } = useSession();
   const { events, addEvent, deleteEvent, canEdit } = useCalendar();
   const [showForm, setShowForm] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userProfile, setUserProfile] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState<EventFormData>({
     title: "",
@@ -62,8 +58,9 @@ export default function Calendar() {
     setShowForm(false);
   };
 
-  const formatEventDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", {
+  const formatEventDate = (date: Date | string) => {
+    const dateObj = date instanceof Date ? date : new Date(date);
+    return dateObj.toLocaleDateString("en-US", {
       weekday: "short",
       month: "short",
       day: "numeric",
@@ -71,8 +68,9 @@ export default function Calendar() {
     });
   };
 
-  const formatEventTime = (date: Date) => {
-    return date.toLocaleTimeString("en-US", {
+  const formatEventTime = (date: Date | string) => {
+    const dateObj = date instanceof Date ? date : new Date(date);
+    return dateObj.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
     });

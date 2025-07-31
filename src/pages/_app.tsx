@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import { useEffect } from "react";
 import Footer from "@/app/components/footer/Footer";
 import { CalendarProvider } from "@/contexts/CalendarContext";
+import Navbar from "@/app/components/navbar/Navbar";
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
@@ -33,6 +34,7 @@ export default function MyApp({ Component, pageProps }: AppProps) {
       <CalendarProvider>
         <AuthGuard>
           <div className="min-h-screen bg-gray-100 text-black">
+            <Navbar />
             <Component {...pageProps} />
             <Footer />
           </div>

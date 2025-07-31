@@ -1,10 +1,5 @@
 import { useState } from "react";
-
-interface MessageInputProps {
-  onSendMessage: (content: string) => void;
-  disabled?: boolean;
-  placeholder?: string;
-}
+import { MessageInputProps } from "@/types/chat";
 
 export const MessageInput: React.FC<MessageInputProps> = ({
   onSendMessage,

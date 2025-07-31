@@ -3,14 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useCalendar } from "@/contexts/CalendarContext";
 import Link from "next/link";
-
-interface CalendarEvent {
-  _id: string;
-  title: string;
-  description?: string;
-  date: string;
-  category: string;
-}
+import { CalendarEvent } from "@/types/event";
 
 export default function UpcomingEvents() {
   const { canEdit } = useCalendar();
@@ -32,11 +25,20 @@ export default function UpcomingEvents() {
         // Filter and sort upcoming events
         const now = new Date();
         const upcoming = events
-          .filter((event: CalendarEvent) => new Date(event.date) >= now)
-          .sort(
-            (a: CalendarEvent, b: CalendarEvent) =>
-              new Date(a.date).getTime() - new Date(b.date).getTime()
-          )
+          .map((event: CalendarEvent) => ({
+            ...event,
+            date: new Date(event.date), // Ensure date is always a Date object
+          }))
+          .filter((event: CalendarEvent) => {
+            const eventDate =
+              event.date instanceof Date ? event.date : new Date(event.date);
+            return eventDate >= now;
+          })
+          .sort((a: CalendarEvent, b: CalendarEvent) => {
+            const aDate = a.date instanceof Date ? a.date : new Date(a.date);
+            const bDate = b.date instanceof Date ? b.date : new Date(b.date);
+            return aDate.getTime() - bDate.getTime();
+          })
           .slice(0, 3); // Show only next 3 events
 
         setUpcomingEvents(upcoming);
@@ -51,27 +53,27 @@ export default function UpcomingEvents() {
     loadEvents();
   }, []);
 
-  const formatEventDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatEventDate = (date: Date | string) => {
+    const dateObj = date instanceof Date ? date : new Date(date);
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
 
-    if (date.toDateString() === today.toDateString()) {
+    if (dateObj.toDateString() === today.toDateString()) {
       return "Today";
-    } else if (date.toDateString() === tomorrow.toDateString()) {
+    } else if (dateObj.toDateString() === tomorrow.toDateString()) {
       return "Tomorrow";
     } else {
-      return date.toLocaleDateString("en-US", {
+      return dateObj.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
       });
     }
   };
 
-  const formatEventTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString("en-US", {
+  const formatEventTime = (date: Date | string) => {
+    const dateObj = date instanceof Date ? date : new Date(date);
+    return dateObj.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
     });
@@ -133,7 +135,7 @@ export default function UpcomingEvents() {
     <div className="space-y-2">
       {upcomingEvents.map((event) => (
         <div
-          key={event._id}
+          key={event.id}
           className="w-full text-left p-2 hover:bg-gray-100 rounded border-l-2 border-blue-500"
         >
           <div className="flex justify-between items-start">

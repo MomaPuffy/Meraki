@@ -1,20 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-
-interface Message {
-  id: string;
-  content: string;
-  senderId: string;
-  senderName: string;
-  senderImage?: string;
-  timestamp: Date | string;
-  chatId: string;
-}
-
-interface ChatContainerProps {
-  chatId: string;
-  currentUserId: string;
-  currentUserName: string;
-}
+import { Message, ChatContainerProps } from "@/types/chat";
 
 export function ChatContainer({
   chatId,

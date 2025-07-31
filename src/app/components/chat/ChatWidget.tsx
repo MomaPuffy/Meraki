@@ -1,19 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useChat } from "@/hooks/useChat";
-
-interface Chat {
-  _id: string;
-  id: string;
-  name: string;
-  lastMessage?: {
-    content: string;
-    senderName: string;
-    timestamp: string;
-  };
-  messageCount: number;
-  updatedAt?: string;
-}
+import { Chat } from "@/types/chat";
 
 export default function ChatWidget() {
   const router = useRouter();
@@ -141,7 +129,11 @@ export default function ChatWidget() {
                         {chat.lastMessage.content}
                       </p>
                       <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
-                        {formatTimestamp(chat.lastMessage.timestamp)}
+                        {formatTimestamp(
+                          typeof chat.lastMessage.timestamp === "string"
+                            ? chat.lastMessage.timestamp
+                            : chat.lastMessage.timestamp.toISOString()
+                        )}
                       </span>
                     </div>
                   ) : (
