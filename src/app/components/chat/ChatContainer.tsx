@@ -172,8 +172,7 @@ export function ChatContainer({
       {/* Messages container - Fixed height with scroll */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 min-h-0"
-        style={{ maxHeight: "calc(100% - 80px)" }}
+        className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 min-h-0 max-h-[calc(100vh-15rem)]"
       >
         {messages.length === 0 ? (
           <div className="text-center text-gray-500 py-8">
