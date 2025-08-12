@@ -60,7 +60,7 @@ export default function Attendance() {
       const response = await fetch("/api/attendance");
       if (response.ok) {
         const data = await response.json();
-        setAttendanceRecords(data);
+        setAttendanceRecords(data.records);
       } else {
         setMessage("Failed to fetch attendance records");
       }
@@ -164,6 +164,10 @@ export default function Attendance() {
 
   const getTodayRecord = () => {
     const today = getPHTDateString(); // Use PHT date for comparison
+    // Add defensive check to ensure attendanceRecords is an array
+    if (!Array.isArray(attendanceRecords)) {
+      return undefined;
+    }
     return attendanceRecords.find((record) => record.date === today);
   };
 

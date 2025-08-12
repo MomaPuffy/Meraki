@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Message, ChatContainerProps } from "@/types/chat";
+import { UserAvatar } from "./UserAvatar";
 
 export function ChatContainer({
   chatId,
   currentUserId,
   currentUserName,
+  currentUserImage,
 }: ChatContainerProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -181,12 +183,22 @@ export function ChatContainer({
           messages.map((message) => (
             <div
               key={message.id}
-              className={`flex ${
+              className={`flex items-start space-x-2 ${
                 message.senderId === currentUserId
                   ? "justify-end"
                   : "justify-start"
               }`}
             >
+              <UserAvatar
+                src={
+                  message.senderId === currentUserId
+                    ? currentUserImage
+                    : message.senderImage
+                }
+                name={message.senderName}
+                size="sm"
+                className="mt-1"
+              />
               <div
                 className={`max-w-xs lg:max-w-md px-3 py-2 rounded-lg ${
                   message.senderId === currentUserId

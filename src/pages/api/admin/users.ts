@@ -1,48 +1,16 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]";
 import clientPromise from "@/lib/mongodb";
 import { getPHTDateString } from "@/utils/dateUtils";
+import { withAdminAuth } from "@/utils/withAuth";
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") {
     return res.status(405).json({ message: "Method not allowed" });
   }
 
   try {
-    // Get the session from NextAuth
-    const session = await getServerSession(req, res, authOptions);
-
-    if (!session || !session.user?.email) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-
     const client = await clientPromise;
     const db = client.db("meraki");
-
-    // Get current user to check admin privileges
-    const currentUser = await db.collection("users").findOne({
-      email: session.user.email,
-    });
-
-    if (!currentUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Check if user has admin privileges
-    const adminPositions = ["advisor", "president", "vice-president"];
-    const isAdmin = adminPositions.includes(
-      currentUser.position?.toLowerCase() || ""
-    );
-
-    if (!isAdmin) {
-      return res
-        .status(403)
-        .json({ message: "Access denied. Admin privileges required." });
-    }
 
     // Get today's date in PHT for comparison
     const todayPHT = getPHTDateString();
@@ -138,3 +106,5 @@ export default async function handler(
     res.status(500).json({ message: "Internal server error" });
   }
 }
+
+export default withAdminAuth(handler);

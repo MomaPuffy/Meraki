@@ -97,6 +97,7 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             name: user.name,
             position: user.position || "Member",
+            image: user.image || null,
           };
         } catch (error) {
           console.error("Authentication error:", error);

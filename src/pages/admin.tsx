@@ -4,6 +4,7 @@ import Image from "next/image";
 import { getUserColorTheme } from "@/lib/colorConfig";
 import { formatTimeForDisplay, formatDateForDisplay } from "@/utils/dateUtils";
 import { UserData, UserAttendanceModalData } from "@/types";
+import { isAdminPosition } from "@/utils/adminRoles";
 
 export default function Admin() {
   const { data: session, status } = useSession();
@@ -14,6 +15,7 @@ export default function Admin() {
   const [searchTerm, setSearchTerm] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [positionFilter, setPositionFilter] = useState("");
+  const [activityFilter, setActivityFilter] = useState("");
   const [resetLoading, setResetLoading] = useState<string | null>(null);
   const [resetMessage, setResetMessage] = useState("");
   const [selectedUser, setSelectedUser] =
@@ -21,42 +23,49 @@ export default function Admin() {
   const [modalLoading, setModalLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
-  // Check if user has admin privileges
-  const isAdmin = (position?: string) => {
-    const adminPositions = ["advisor", "president", "vice-president"];
-    return adminPositions.includes(position?.toLowerCase() || "");
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch("/api/admin/users");
+      const data = await response.json();
+
+      if (response.ok) {
+        setUsers(data.users || []);
+      } else {
+        setError(data.message || "Failed to fetch users");
+      }
+    } catch (err) {
+      console.error("Fetch users error:", err);
+      setError("Error fetching users");
+    }
   };
 
   useEffect(() => {
     const fetchData = async () => {
       if (session) {
         try {
-          // First get current user to check admin privileges
+          setLoading(true);
+
+          // Fetch current user profile
           const profileResponse = await fetch("/api/profile");
           const profileData = await profileResponse.json();
-
           if (profileResponse.ok) {
             setCurrentUser(profileData.user);
-
-            // Check if user has admin privileges
-            if (isAdmin(profileData.user.position)) {
-              // Fetch all users if admin
-              const usersResponse = await fetch("/api/admin/users");
-              const usersData = await usersResponse.json();
-
-              if (usersResponse.ok) {
-                setUsers(usersData.users);
-              } else {
-                setError(usersData.message || "Failed to fetch users");
-              }
-            } else {
-              setError("Access denied. Admin privileges required.");
-            }
-          } else {
-            setError(profileData.message || "Failed to fetch profile");
           }
+
+          // Check admin access
+          if (
+            session.user?.position !== "Admin" &&
+            session.user?.position !== "President" &&
+            session.user?.position !== "Vice-President" &&
+            session.user?.position !== "Advisor"
+          ) {
+            setError("Access denied. Admin privileges required.");
+            return;
+          }
+
+          await fetchUsers();
         } catch (err) {
-          console.error("Admin fetch error:", err);
+          console.error("Data fetch error:", err);
           setError("Something went wrong while fetching data");
         } finally {
           setLoading(false);
@@ -157,8 +166,14 @@ export default function Admin() {
     const matchesDepartment =
       !departmentFilter || user.department === departmentFilter;
     const matchesPosition = !positionFilter || user.position === positionFilter;
+    const matchesActivity =
+      !activityFilter ||
+      (activityFilter === "active" && user.lastLoginToday) ||
+      (activityFilter === "inactive" && !user.lastLoginToday);
 
-    return matchesSearch && matchesDepartment && matchesPosition;
+    return (
+      matchesSearch && matchesDepartment && matchesPosition && matchesActivity
+    );
   });
 
   // Get unique departments and positions for filters
@@ -172,7 +187,9 @@ export default function Admin() {
   // Count statistics
   const totalUsers = users.length;
   const loggedInToday = users.filter((user) => user.lastLoginToday).length;
-  const adminUsers = users.filter((user) => isAdmin(user.position)).length;
+  const adminUsers = users.filter((user) =>
+    isAdminPosition(user.position)
+  ).length;
 
   if (status === "loading" || loading) {
     return (
@@ -292,7 +309,7 @@ export default function Admin() {
 
               {/* Search and Filters */}
               <div className="mb-6 bg-gray-50 p-4 rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Search Members
@@ -337,6 +354,20 @@ export default function Admin() {
                           {pos}
                         </option>
                       ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Filter by Activity
+                    </label>
+                    <select
+                      value={activityFilter}
+                      onChange={(e) => setActivityFilter(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">All Members</option>
+                      <option value="active">Active Today</option>
+                      <option value="inactive">Not Active Today</option>
                     </select>
                   </div>
                 </div>
@@ -494,7 +525,7 @@ export default function Admin() {
 
       {/* User Attendance Modal */}
       {showModal && (
-        <div className="fixed inset-0 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 backdrop-blur-xs bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div
               className={`flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r ${selectedUserColors.headerFrom} ${selectedUserColors.headerTo}`}

@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { ChatContainer } from "@/app/components/chat/ChatContainer";
+import { UserAvatar } from "@/app/components/chat/UserAvatar";
 import { Chat } from "@/types/chat";
 
 export default function ChatPage() {
@@ -8,10 +9,14 @@ export default function ChatPage() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [loading, setLoading] = useState(true);
+  const [chatSwitching, setChatSwitching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newChatName, setNewChatName] = useState("");
   const [newChatDescription, setNewChatDescription] = useState("");
+
+  // Use ref to track if we've auto-selected a chat to prevent loops
+  const hasAutoSelected = useRef(false);
 
   const fetchChats = useCallback(async () => {
     console.log("Starting fetchChats...");
@@ -32,9 +37,14 @@ export default function ChatPage() {
 
       setChats(fetchedChats);
 
-      // Auto-select first chat if none selected
-      if (fetchedChats.length > 0 && !selectedChat) {
+      // Auto-select first chat only if none selected and haven't auto-selected before
+      if (
+        fetchedChats.length > 0 &&
+        !selectedChat &&
+        !hasAutoSelected.current
+      ) {
         setSelectedChat(fetchedChats[0]);
+        hasAutoSelected.current = true;
       }
     } catch (error) {
       console.error("Error fetching chats:", error);
@@ -44,9 +54,28 @@ export default function ChatPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedChat]);
+  }, [selectedChat]); // Remove selectedChat dependency to prevent circular re-renders
 
-  // Add useEffect to fetch chats when component mounts and session is ready
+  // Optimized chat selection handler
+  const handleChatSelect = useCallback(
+    async (chat: Chat) => {
+      if (
+        selectedChat &&
+        (selectedChat._id === chat._id || selectedChat.id === chat.id)
+      ) {
+        return; // Don't reload if same chat
+      }
+
+      setChatSwitching(true);
+      // Small delay to show loading state
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      setSelectedChat(chat);
+      setChatSwitching(false);
+    },
+    [selectedChat]
+  );
+
+  // Simplified useEffect - only fetch when session status changes
   useEffect(() => {
     if (status === "authenticated" && session) {
       console.log("Session authenticated, fetching chats...");
@@ -55,7 +84,7 @@ export default function ChatPage() {
       console.log("User not authenticated");
       setLoading(false);
     }
-  }, [status, session, fetchChats]);
+  }, [status, session, fetchChats]); // Only depend on essential session data
 
   const initializeChats = async () => {
     try {
@@ -95,7 +124,7 @@ export default function ChatPage() {
       if (response.ok) {
         const newChat = await response.json();
         setChats((prev) => [...prev, newChat]);
-        setSelectedChat(newChat);
+        await handleChatSelect(newChat);
         setShowCreateForm(false);
         setNewChatName("");
         setNewChatDescription("");
@@ -132,10 +161,12 @@ export default function ChatPage() {
     );
   }
 
-  // Add null checks for session.user properties
-  const currentUserId = session.user?.id || session.user?.email || "anonymous";
+  // Add null checks for session.user properties - memoize to prevent re-renders
+  const currentUserId =
+    session?.user?.id || session?.user?.email || "anonymous";
   const currentUserName =
-    session.user?.name || session.user?.email || "Anonymous";
+    session?.user?.name || session?.user?.email || "Anonymous";
+  const currentUserImage = session?.user?.image;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-200 py-4 px-4">
@@ -144,7 +175,14 @@ export default function ChatPage() {
           {/* Sidebar */}
           <div className="lg:col-span-1 bg-white rounded-lg shadow-lg p-4">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Chat Rooms</h2>
+              <div className="flex items-center space-x-2">
+                <UserAvatar
+                  src={currentUserImage}
+                  name={currentUserName}
+                  size="sm"
+                />
+                <h2 className="text-lg font-semibold">Chat Rooms</h2>
+              </div>
               <button
                 onClick={() => setShowCreateForm(true)}
                 className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
@@ -220,31 +258,43 @@ export default function ChatPage() {
                   </button>
                 </div>
               ) : (
-                chats.map((chat) => (
-                  <button
-                    key={chat._id || chat.id}
-                    onClick={() => setSelectedChat(chat)}
-                    className={`w-full text-left p-3 rounded transition-colors ${
-                      selectedChat?._id === chat._id ||
-                      selectedChat?.id === chat.id
-                        ? "bg-blue-100 border border-blue-300"
-                        : "hover:bg-gray-100"
-                    }`}
-                  >
-                    <div className="font-medium text-sm">{chat.name}</div>
-                    {chat.description && (
-                      <div className="text-xs text-gray-600 truncate">
-                        {chat.description}
+                chats.map((chat) => {
+                  const isSelected =
+                    selectedChat &&
+                    (selectedChat._id === chat._id ||
+                      selectedChat.id === chat.id);
+
+                  return (
+                    <button
+                      key={chat._id || chat.id}
+                      onClick={() => handleChatSelect(chat)}
+                      disabled={chatSwitching}
+                      className={`w-full text-left p-3 rounded transition-all duration-200 ${
+                        isSelected
+                          ? "bg-blue-100 border border-blue-300"
+                          : "hover:bg-gray-100"
+                      } ${
+                        chatSwitching ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2 mb-2">
+                        <UserAvatar name={chat.name} size="sm" />
+                        <div className="font-medium text-sm">{chat.name}</div>
                       </div>
-                    )}
-                    {chat.lastMessage && (
-                      <div className="text-xs text-gray-500 mt-1 truncate">
-                        {chat.lastMessage.senderName}:{" "}
-                        {chat.lastMessage.content}
-                      </div>
-                    )}
-                  </button>
-                ))
+                      {chat.description && (
+                        <div className="text-xs text-gray-600 truncate ml-7">
+                          {chat.description}
+                        </div>
+                      )}
+                      {chat.lastMessage && (
+                        <div className="text-xs text-gray-500 mt-1 truncate ml-7">
+                          {chat.lastMessage.senderName}:{" "}
+                          {chat.lastMessage.content}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })
               )}
             </div>
           </div>
@@ -255,7 +305,12 @@ export default function ChatPage() {
               <div className="bg-white rounded-lg shadow-lg h-full flex flex-col overflow-hidden">
                 {/* Chat Header */}
                 <div className="bg-blue-600 text-white p-4 rounded-t-lg flex-shrink-0">
-                  <h2 className="text-xl font-semibold">{selectedChat.name}</h2>
+                  <h2 className="text-xl font-semibold flex items-center">
+                    {selectedChat.name}
+                    {chatSwitching && (
+                      <div className="ml-2 animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    )}
+                  </h2>
                   {selectedChat.description && (
                     <p className="text-blue-100 text-sm">
                       {selectedChat.description}
@@ -264,11 +319,21 @@ export default function ChatPage() {
                 </div>
 
                 {/* Chat Container - Takes remaining space */}
-                <div className="flex-1 min-h-0">
+                <div className="flex-1 min-h-0 relative">
+                  {chatSwitching && (
+                    <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+                      <div className="flex items-center space-x-2 text-gray-600">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                        <span>Loading chat...</span>
+                      </div>
+                    </div>
+                  )}
                   <ChatContainer
+                    key={selectedChat._id || selectedChat.id}
                     chatId={selectedChat._id || selectedChat.id}
                     currentUserId={currentUserId}
                     currentUserName={currentUserName}
+                    currentUserImage={currentUserImage}
                   />
                 </div>
               </div>

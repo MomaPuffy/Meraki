@@ -1,5 +1,5 @@
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { getUserColorTheme } from "@/lib/colorConfig";
 import { UserProfile } from "@/types";
@@ -12,6 +12,9 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDepartment, setEditDepartment] = useState("");
+  const [editImage, setEditImage] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -27,6 +30,7 @@ export default function Profile() {
             setUserProfile(data.user);
             setEditName(data.user.name); // Initialize edit name
             setEditDepartment(data.user.department || ""); // Initialize edit department
+            setImagePreview(data.user.image); // Initialize image preview
           } else {
             setError(data.message || "Failed to fetch profile");
           }
@@ -44,6 +48,31 @@ export default function Profile() {
     fetchUserProfile();
   }, [session, status]);
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setSaveError("Image size must be less than 5MB");
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        setSaveError("Please select a valid image file");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        setEditImage(result);
+        setImagePreview(result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSaveProfile = async () => {
     if (!editName.trim()) {
       setSaveError("Name cannot be empty");
@@ -55,7 +84,7 @@ export default function Profile() {
     setSaveSuccess(false);
 
     try {
-      const response = await fetch("/api/update-profile", {
+      const response = await fetch("/api/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -63,6 +92,7 @@ export default function Profile() {
         body: JSON.stringify({
           name: editName.trim(),
           department: editDepartment.trim(),
+          image: editImage,
         }),
       });
 
@@ -71,6 +101,7 @@ export default function Profile() {
       if (response.ok) {
         setUserProfile(data.user);
         setIsEditing(false);
+        setEditImage(null);
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000); // Hide success message after 3 seconds
       } else {
@@ -88,6 +119,8 @@ export default function Profile() {
     setIsEditing(false);
     setEditName(userProfile?.name || "");
     setEditDepartment(userProfile?.department || "");
+    setEditImage(null);
+    setImagePreview(userProfile?.image || null);
     setSaveError("");
   };
 
@@ -279,6 +312,65 @@ export default function Profile() {
                   Edit Profile
                 </h3>
                 <div className="space-y-4">
+                  {/* Profile Picture Upload */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Profile Picture
+                    </label>
+                    <div className="flex items-center space-x-4">
+                      <div className="relative flex-shrink-0">
+                        {imagePreview ? (
+                          <Image
+                            src={imagePreview}
+                            alt="Profile preview"
+                            width={80}
+                            height={80}
+                            className="w-20 h-20 rounded-full border-4 border-white shadow-lg object-cover"
+                          />
+                        ) : (
+                          <div className="w-20 h-20 rounded-full bg-gray-300 border-4 border-white shadow-lg flex items-center justify-center">
+                            <span className="text-xl font-bold text-gray-600">
+                              {userProfile?.name?.charAt(0).toUpperCase() ||
+                                "U"}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                          <svg
+                            className="w-4 h-4 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            />
+                          </svg>
+                          Upload Photo
+                        </button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          className="hidden"
+                        />
+                        <p className="text-xs text-gray-500">
+                          Max 5MB. JPG, PNG supported.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div>
                     <label
                       htmlFor="editName"

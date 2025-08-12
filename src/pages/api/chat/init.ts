@@ -1,20 +1,15 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]";
+import { Session } from "next-auth";
 import clientPromise from "@/lib/mongodb";
+import { withAuth } from "@/utils/withAuth";
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
+  session: Session
 ) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  const session = await getServerSession(req, res, authOptions);
-
-  if (!session) {
-    return res.status(401).json({ error: "Unauthorized" });
   }
 
   try {
@@ -76,3 +71,5 @@ export default async function handler(
     res.status(500).json({ error: "Failed to initialize chats" });
   }
 }
+
+export default withAuth(handler);

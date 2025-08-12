@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { getServerSession } from "next-auth";
+import { getServerSession, Session } from "next-auth";
 import { authOptions } from "./auth/[...nextauth]";
 import clientPromise from "@/lib/mongodb";
 import {
@@ -8,23 +8,25 @@ import {
   getSignedThumbnailUrl,
 } from "@/lib/cloudinary";
 import { getPHTDateString, getPHTTimeString } from "@/utils/dateUtils";
+import { withAuth } from "@/utils/withAuth";
+import {
+  badRequest,
+  created,
+  methodNotAllowed,
+  ok,
+  serverError,
+} from "@/utils/apiResponse";
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
+  session: Session
 ) {
-  const session = await getServerSession(req, res, authOptions);
-
-  if (!session) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
   if (req.method === "GET") {
     try {
       const client = await clientPromise;
       const db = client.db("meraki");
 
-      // Get attendance records for the current user
       const attendanceRecords = await db
         .collection("attendance")
         .find({ userId: session.user.id })
@@ -32,10 +34,8 @@ export default async function handler(
         .limit(50)
         .toArray();
 
-      // Generate fresh signed URLs for private images
       const recordsWithSignedUrls = attendanceRecords.map((record) => {
         const updatedRecord = { ...record };
-
         if (record.timeInImage?.public_id) {
           updatedRecord.timeInImage = {
             ...record.timeInImage,
@@ -43,7 +43,6 @@ export default async function handler(
             thumbnail: getSignedThumbnailUrl(record.timeInImage.public_id),
           };
         }
-
         if (record.timeOutImage?.public_id) {
           updatedRecord.timeOutImage = {
             ...record.timeOutImage,
@@ -51,54 +50,42 @@ export default async function handler(
             thumbnail: getSignedThumbnailUrl(record.timeOutImage.public_id),
           };
         }
-
         return updatedRecord;
       });
 
-      return res.status(200).json(recordsWithSignedUrls);
+      return ok(res, { records: recordsWithSignedUrls });
     } catch (error) {
       console.error("Error fetching attendance:", error);
-      return res
-        .status(500)
-        .json({ error: "Failed to fetch attendance records" });
+      return serverError(res, "Failed to fetch attendance records");
     }
   }
 
   if (req.method === "POST") {
     try {
-      const { type, image } = req.body; // type: 'time-in' or 'time-out'
-
-      if (!type || (type !== "time-in" && type !== "time-out")) {
-        return res.status(400).json({ error: "Invalid attendance type" });
+      const { type, image } = req.body;
+      if (!type || !["time-in", "time-out"].includes(type)) {
+        return badRequest(res, "Invalid attendance type");
       }
 
       const client = await clientPromise;
       const db = client.db("meraki");
+      const today = getPHTDateString();
+      const currentPHTTimeString = getPHTTimeString();
 
-      const today = getPHTDateString(); // Use PHT date string
-      const currentPHTTimeString = getPHTTimeString(); // Use PHT time as ISO string
-
-      // Upload image to Cloudinary if provided
       let imageData = null;
       if (image) {
-        try {
-          const uploadResult = await uploadImage(
-            image,
-            `attendance/${session.user.name}`
-          );
-          imageData = {
-            url: uploadResult.url,
-            thumbnail: uploadResult.thumbnail,
-            public_id: uploadResult.public_id,
-          };
-        } catch (uploadError) {
-          console.error("Image upload failed:", uploadError);
-          return res.status(500).json({ error: "Failed to upload image" });
-        }
+        const uploadResult = await uploadImage(
+          image,
+          `attendance/${session.user.name}`
+        );
+        imageData = {
+          url: uploadResult.url,
+          thumbnail: uploadResult.thumbnail,
+          public_id: uploadResult.public_id,
+        };
       }
 
       if (type === "time-in") {
-        // Check if user already has a time-in for today
         const existingRecord = await db.collection("attendance").findOne({
           userId: session.user.id,
           date: today,
@@ -106,10 +93,9 @@ export default async function handler(
         });
 
         if (existingRecord) {
-          return res.status(400).json({ error: "Already timed in for today" });
+          return badRequest(res, "Already timed in for today");
         }
 
-        // Create new attendance record
         const newRecord = {
           userId: session.user.id,
           userName: session.user.name,
@@ -121,13 +107,13 @@ export default async function handler(
         };
 
         await db.collection("attendance").insertOne(newRecord);
-        return res
-          .status(201)
-          .json({ message: "Timed in successfully", record: newRecord });
+        return created(res, {
+          message: "Timed in successfully",
+          record: newRecord,
+        });
       }
 
       if (type === "time-out") {
-        // Find today's record and update with time-out
         const updateResult = await db.collection("attendance").updateOne(
           {
             userId: session.user.id,
@@ -145,18 +131,21 @@ export default async function handler(
         );
 
         if (updateResult.matchedCount === 0) {
-          return res.status(400).json({
-            error: "No time-in record found for today or already timed out",
-          });
+          return badRequest(
+            res,
+            "No time-in record found for today or already timed out"
+          );
         }
 
-        return res.status(200).json({ message: "Timed out successfully" });
+        return ok(res, { message: "Timed out successfully" });
       }
     } catch (error) {
       console.error("Error recording attendance:", error);
-      return res.status(500).json({ error: "Failed to record attendance" });
+      return serverError(res, "Failed to record attendance");
     }
   }
 
-  return res.status(405).json({ error: "Method not allowed" });
+  return methodNotAllowed(res);
 }
+
+export default withAuth(handler);

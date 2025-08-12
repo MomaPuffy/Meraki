@@ -1,4 +1,4 @@
-import { User } from './user';
+import { User } from "./user";
 
 export interface Message {
   id: string;
@@ -25,6 +25,7 @@ export interface Chat {
   lastMessage?: {
     content: string;
     senderName: string;
+    senderImage?: string;
     timestamp: Date;
   } | null;
   messageCount: number;
@@ -44,6 +45,7 @@ export interface ChatContainerProps {
   chatId: string;
   currentUserId: string;
   currentUserName: string;
+  currentUserImage?: string;
 }
 
 export interface MessageInputProps {
