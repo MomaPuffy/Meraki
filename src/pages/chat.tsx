@@ -166,7 +166,7 @@ export default function ChatPage() {
     session?.user?.id || session?.user?.email || "anonymous";
   const currentUserName =
     session?.user?.name || session?.user?.email || "Anonymous";
-  const currentUserImage = session?.user?.image;
+  const currentUserImage = session?.user?.image || undefined;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-200 py-4 px-4">
