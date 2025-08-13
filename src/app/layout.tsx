@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { CalendarProvider } from "@/contexts/CalendarContext";
+import { Providers } from "@/components/Providers";
 
 export const metadata: Metadata = {
   title: "Meraki",
@@ -15,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <CalendarProvider>{children}</CalendarProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

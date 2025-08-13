@@ -19,7 +19,7 @@ export interface FilterOption {
   value: string;
   onChange: (value: string) => void;
   // Add support for custom filter logic
-  customFilter?: (item: any, filterValue: string) => boolean;
+  customFilter?: (item: unknown, filterValue: string) => boolean;
 }
 
 interface DataTableProps<T> {
@@ -49,7 +49,7 @@ interface DataTableProps<T> {
   };
 }
 
-export default function DataTable<T extends Record<string, any>>({
+export default function DataTable<T extends Record<string, unknown>>({
   data,
   columns: providedColumns,
   autoColumns = true,
@@ -111,7 +111,7 @@ export default function DataTable<T extends Record<string, any>>({
           centered: true,
           mobileHidden: true,
           render: (item) => {
-            const imgSrc = item[key];
+            const imgSrc = item[key] as string;
             if (!imgSrc)
               return <span className="text-gray-400 text-xs">No image</span>;
             return (
@@ -132,7 +132,7 @@ export default function DataTable<T extends Record<string, any>>({
         column = {
           ...column,
           render: (item) =>
-            item[key] ? formatDateForDisplay(item[key], false) : "-",
+            item[key] ? formatDateForDisplay(item[key] as string, false) : "-",
         };
       } else if (
         timeFields.includes(key) ||
@@ -141,7 +141,8 @@ export default function DataTable<T extends Record<string, any>>({
         column = {
           ...column,
           centered: true,
-          render: (item) => (item[key] ? formatTimeForDisplay(item[key]) : "-"),
+          render: (item) =>
+            item[key] ? formatTimeForDisplay(item[key] as string) : "-",
         };
       } else if (
         statusFields.includes(key) ||
@@ -151,7 +152,7 @@ export default function DataTable<T extends Record<string, any>>({
           ...column,
           centered: true,
           render: (item) => {
-            const status = item[key];
+            const status = item[key] as string;
             if (!status) return "-";
 
             let bgColor = "bg-gray-100 text-gray-800";
@@ -189,7 +190,7 @@ export default function DataTable<T extends Record<string, any>>({
           ...column,
           centered: true,
           render: (item) => {
-            const value = item[key];
+            const value = item[key] as string;
             if (!value) return "Unassigned";
             return (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -264,25 +265,33 @@ export default function DataTable<T extends Record<string, any>>({
               typeof rendered === "object" &&
               "props" in rendered
             ) {
-              const extractText = (element: any): string => {
+              const extractText = (element: unknown): string => {
                 if (typeof element === "string") return element;
                 if (typeof element === "number") return String(element);
                 if (element && typeof element === "object") {
-                  if (element.props && element.props.children) {
-                    if (typeof element.props.children === "string") {
-                      return element.props.children;
+                  if (
+                    "props" in element &&
+                    (element as { props?: { children?: unknown } }).props &&
+                    (element as { props: { children?: unknown } }).props
+                      .children
+                  ) {
+                    const children = (
+                      element as { props: { children: unknown } }
+                    ).props.children;
+                    if (typeof children === "string") {
+                      return children;
                     }
-                    if (Array.isArray(element.props.children)) {
-                      return element.props.children.map(extractText).join(" ");
+                    if (Array.isArray(children)) {
+                      return children.map(extractText).join(" ");
                     }
-                    return extractText(element.props.children);
+                    return extractText(children);
                   }
                 }
                 return "";
               };
               renderedValue = extractText(rendered).toLowerCase();
             }
-          } catch (error) {
+          } catch {
             renderedValue = rawValue;
           }
         }
@@ -310,7 +319,7 @@ export default function DataTable<T extends Record<string, any>>({
       }
 
       // Default behavior - direct field comparison
-      return item[filter.key] === filter.value;
+      return String(item[filter.key]) === filter.value;
     });
 
     return matchesFilters;
@@ -329,7 +338,9 @@ export default function DataTable<T extends Record<string, any>>({
                 {column.header}:
               </span>
               <span className="text-sm text-gray-900">
-                {column.render ? column.render(item) : item[column.key] || "-"}
+                {column.render
+                  ? column.render(item)
+                  : String(item[column.key] || "-")}
               </span>
             </div>
           ))}
@@ -345,7 +356,7 @@ export default function DataTable<T extends Record<string, any>>({
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, ...filters.map((f) => f.value)]);
+  }, [searchTerm, filters]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -463,7 +474,7 @@ export default function DataTable<T extends Record<string, any>>({
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedData.map((item, index) => (
                 <tr
-                  key={item.id || index}
+                  key={(item.id as string | number) || index}
                   className={`hover:bg-gray-50 ${
                     onRowClick ? "cursor-pointer" : ""
                   }`}
@@ -488,7 +499,7 @@ export default function DataTable<T extends Record<string, any>>({
                             className="truncate block"
                             title={String(item[column.key] || "-")}
                           >
-                            {item[column.key] || "-"}
+                            {String(item[column.key] || "-")}
                           </span>
                         )}
                       </div>
@@ -505,41 +516,15 @@ export default function DataTable<T extends Record<string, any>>({
       <div className="md:hidden space-y-4">
         {paginatedData.map((item, index) => (
           <div
-            key={item.id || index}
+            key={(item.id as string | number) || index}
             className={`bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow ${
               onRowClick ? "cursor-pointer" : ""
             }`}
             onClick={() => onRowClick?.(item)}
           >
-            {renderMobileCard ? (
-              renderMobileCard(item)
-            ) : (
-              <div className="space-y-3">
-                {columns
-                  .filter((col) => !col.mobileHidden)
-                  .map((column) => (
-                    <div key={column.key} className="flex flex-col space-y-1">
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {column.header}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        {column.render ? (
-                          <div className="w-full break-words">
-                            {column.render(item)}
-                          </div>
-                        ) : (
-                          <span
-                            className="text-sm text-gray-900 break-words block"
-                            title={String(item[column.key] || "-")}
-                          >
-                            {item[column.key] || "-"}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            )}
+            {renderMobileCard
+              ? renderMobileCard(item)
+              : effectiveRenderMobileCard(item)}
           </div>
         ))}
       </div>

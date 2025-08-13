@@ -1,23 +1,20 @@
 export interface AttendanceRecord {
-  _id: string;
+  id: string;
   userId: string;
-  userName: string;
-  userEmail: string;
   date: string;
   timeIn?: string;
   timeOut?: string;
   timeInImage?: {
     url: string;
     thumbnail: string;
-    public_id: string;
   };
   timeOutImage?: {
     url: string;
     thumbnail: string;
-    public_id: string;
   };
   createdAt: string;
-  updatedAt?: string;
+  updatedAt: string;
+  [key: string]: unknown; // Index signature for DataTable compatibility
 }
 
 export interface UserAttendanceModalData {
