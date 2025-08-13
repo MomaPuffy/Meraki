@@ -1,6 +1,7 @@
 import { authOptions } from "@/pages/api/auth/[...nextauth]";
 import { NextApiHandler, NextApiRequest, NextApiResponse } from "next";
 import { getServerSession, Session } from "next-auth";
+import { isAdminPosition } from "./adminRoles";
 
 export type SessionUser = { id?: string; position?: string };
 
@@ -22,10 +23,9 @@ export function withAdminAuth(handler: NextApiHandler) {
   return withAuth(async (req, res, session) => {
     const position = session.user.position;
 
-    const adminPositions = ["advisor", "president", "vice-president"];
-    const isAdmin = adminPositions.includes(position?.toLowerCase() || "");
-
-    if (!isAdmin) return res.status(403).json({ error: "Admin Only" });
+    if (!isAdminPosition(position)) {
+      return res.status(403).json({ error: "Admin Only" });
+    }
 
     return handler(req, res);
   });

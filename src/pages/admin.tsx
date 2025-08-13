@@ -4,7 +4,9 @@ import Image from "next/image";
 import { getUserColorTheme } from "@/lib/colorConfig";
 import { formatTimeForDisplay, formatDateForDisplay } from "@/utils/dateUtils";
 import { UserData, UserAttendanceModalData } from "@/types";
-import { isAdminPosition } from "@/utils/adminRoles";
+import { isAdminPosition, hasAdminAccess } from "@/utils/adminRoles";
+import { IoClose, IoReload } from "react-icons/io5";
+import DataTable, { Column, FilterOption } from "@/components/DataTable";
 
 export default function Admin() {
   const { data: session, status } = useSession();
@@ -12,7 +14,6 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [positionFilter, setPositionFilter] = useState("");
   const [activityFilter, setActivityFilter] = useState("");
@@ -52,13 +53,8 @@ export default function Admin() {
             setCurrentUser(profileData.user);
           }
 
-          // Check admin access
-          if (
-            session.user?.position !== "Admin" &&
-            session.user?.position !== "President" &&
-            session.user?.position !== "Vice-President" &&
-            session.user?.position !== "Advisor"
-          ) {
+          // Check admin access using utility function
+          if (!hasAdminAccess(session)) {
             setError("Access denied. Admin privileges required.");
             return;
           }
@@ -153,29 +149,6 @@ export default function Admin() {
     return formatDateForDisplay(dateString, false);
   };
 
-  // Filter users based on search and filters
-  const filteredUsers = users.filter((user) => {
-    const searchLower = searchTerm.toLowerCase();
-    const matchesSearch =
-      (user.name || "").toLowerCase().includes(searchLower) ||
-      (user.email || "").toLowerCase().includes(searchLower) ||
-      (user.position || "").toLowerCase().includes(searchLower) ||
-      (user.department || "").toLowerCase().includes(searchLower) ||
-      (user.provider || "").toLowerCase().includes(searchLower) ||
-      (user.id || "").toLowerCase().includes(searchLower);
-    const matchesDepartment =
-      !departmentFilter || user.department === departmentFilter;
-    const matchesPosition = !positionFilter || user.position === positionFilter;
-    const matchesActivity =
-      !activityFilter ||
-      (activityFilter === "active" && user.lastLoginToday) ||
-      (activityFilter === "inactive" && !user.lastLoginToday);
-
-    return (
-      matchesSearch && matchesDepartment && matchesPosition && matchesActivity
-    );
-  });
-
   // Get unique departments and positions for filters
   const departments = [
     ...new Set(users.map((user) => user.department).filter(Boolean)),
@@ -190,6 +163,279 @@ export default function Admin() {
   const adminUsers = users.filter((user) =>
     isAdminPosition(user.position)
   ).length;
+
+  // Define filters using computedFilters approach
+  const filters: FilterOption[] = [
+    {
+      key: "department",
+      label: "Filter by Department",
+      value: departmentFilter,
+      onChange: setDepartmentFilter,
+      options: [
+        { value: "", label: "All Departments" },
+        ...departments.map((dept) => ({
+          value: dept as string,
+          label: dept as string,
+        })),
+      ],
+    },
+    {
+      key: "position",
+      label: "Filter by Position",
+      value: positionFilter,
+      onChange: setPositionFilter,
+      options: [
+        { value: "", label: "All Positions" },
+        ...positions.map((pos) => ({
+          value: pos as string,
+          label: pos as string,
+        })),
+      ],
+    },
+    {
+      key: "activityStatus", // Use a computed field name
+      label: "Filter by Activity",
+      value: activityFilter,
+      onChange: setActivityFilter,
+      options: [
+        { value: "", label: "All Members" },
+        { value: "active", label: "Active Today" },
+        { value: "inactive", label: "Not Active Today" },
+      ],
+    },
+  ];
+
+  // Define computed filters
+  const computedFilters = {
+    activityStatus: (user: UserData) => {
+      return user.lastLoginToday ? "active" : "inactive";
+    },
+  };
+
+  // Custom render functions for auto-generated columns
+  const renderUserActions = (user: UserData) => (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        handleResetPassword(user.id, user.email);
+      }}
+      disabled={resetLoading === user.id}
+      className="text-orange-600 hover:text-orange-900 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+      title="Reset Password"
+    >
+      {resetLoading === user.id ? "Sending..." : "Reset Password"}
+    </button>
+  );
+
+  // Custom columns for complex rendering
+  const userColumns: Column<UserData>[] = [
+    {
+      key: "member",
+      header: "Member",
+      render: (user) => (
+        <div className="flex items-center">
+          <div className="flex-shrink-0 h-10 w-10">
+            {user.image ? (
+              <Image
+                src={user.image}
+                alt={`${user.name}'s profile`}
+                width={40}
+                height={40}
+                className="h-10 w-10 rounded-full"
+              />
+            ) : (
+              <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                <span className="text-sm font-medium text-gray-600">
+                  {user.name?.charAt(0).toUpperCase() || "U"}
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="ml-4">
+            <div className="text-sm font-medium text-gray-900">{user.name}</div>
+            <div className="text-sm text-gray-500">{user.email}</div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "department",
+      header: "Department",
+      centered: true,
+      render: (user) => {
+        const memberColors = getUserColorTheme(user.position, user.department);
+        return (
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${memberColors.badgeBg} ${memberColors.badgeText}`}
+          >
+            {user.department || "Unassigned"}
+          </span>
+        );
+      },
+    },
+    {
+      key: "position",
+      header: "Position",
+      centered: true,
+      render: (user) => user.position || "Member",
+    },
+    {
+      key: "loginStatus",
+      header: "Login Status",
+      centered: true,
+      render: (user) =>
+        user.lastLoginToday ? (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active Today
+          </span>
+        ) : (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            Not Active
+          </span>
+        ),
+    },
+    {
+      key: "timeInToday",
+      header: "Time In",
+      centered: true,
+      mobileHidden: true,
+      render: (user) => (user.timeInToday ? formatTime(user.timeInToday) : "-"),
+    },
+    {
+      key: "timeOutToday",
+      header: "Time Out",
+      centered: true,
+      mobileHidden: true,
+      render: (user) => {
+        if (user.timeOutToday) {
+          return formatTime(user.timeOutToday);
+        } else if (user.lastLoginToday) {
+          return (
+            <span className="text-orange-600 font-medium">Still Active</span>
+          );
+        }
+        return "-";
+      },
+    },
+    {
+      key: "lastLoginTime",
+      header: "Last Login",
+      centered: true,
+      render: (user) =>
+        user.lastLoginTime ? formatDate(user.lastLoginTime) : "Never",
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      centered: true,
+      render: renderUserActions,
+    },
+  ];
+
+  // Custom mobile card renderer for users
+  const renderUserMobileCard = (user: UserData) => {
+    const memberColors = getUserColorTheme(user.position, user.department);
+
+    return (
+      <>
+        {/* Member Header */}
+        <div className="flex items-start justify-between mb-3 gap-3">
+          <div className="flex items-start space-x-3 min-w-0 flex-1">
+            <div className="flex-shrink-0 h-12 w-12">
+              {user.image ? (
+                <Image
+                  src={user.image}
+                  alt={`${user.name}'s profile`}
+                  width={48}
+                  height={48}
+                  className="h-12 w-12 rounded-full"
+                />
+              ) : (
+                <div className="h-12 w-12 rounded-full bg-gray-300 flex items-center justify-center">
+                  <span className="text-lg font-medium text-gray-600">
+                    {user.name?.charAt(0).toUpperCase() || "U"}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium text-gray-900 break-words">
+                {user.name}
+              </div>
+              <div className="text-xs text-gray-500 break-all">
+                {user.email}
+              </div>
+            </div>
+          </div>
+          <div className="flex-shrink-0">{renderUserActions(user)}</div>
+        </div>
+
+        {/* Member Details Grid */}
+        <div className="grid grid-cols-1 gap-3 text-sm">
+          <div className="space-y-1">
+            <div className="text-xs text-gray-500 mb-1">Department</div>
+            <span
+              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${memberColors.badgeBg} ${memberColors.badgeText} break-words`}
+            >
+              {user.department || "Unassigned"}
+            </span>
+          </div>
+          <div className="space-y-1">
+            <div className="text-xs text-gray-500 mb-1">Position</div>
+            <div className="text-sm text-gray-900 break-words">
+              {user.position || "Member"}
+            </div>
+          </div>
+          <div className="space-y-1">
+            <div className="text-xs text-gray-500 mb-1">Status</div>
+            {user.lastLoginToday ? (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                Active Today
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                Not Active
+              </span>
+            )}
+          </div>
+          <div className="space-y-1">
+            <div className="text-xs text-gray-500 mb-1">Last Login</div>
+            <div className="text-sm text-gray-900 break-words">
+              {user.lastLoginTime ? formatDate(user.lastLoginTime) : "Never"}
+            </div>
+          </div>
+        </div>
+
+        {/* Time Information */}
+        {(user.timeInToday || user.timeOutToday) && (
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="space-y-1">
+                <div className="text-xs text-gray-500 mb-1">Time In</div>
+                <div className="text-sm text-gray-900 break-words">
+                  {user.timeInToday ? formatTime(user.timeInToday) : "-"}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs text-gray-500 mb-1">Time Out</div>
+                <div className="text-sm text-gray-900 break-words">
+                  {user.timeOutToday ? (
+                    formatTime(user.timeOutToday)
+                  ) : user.lastLoginToday ? (
+                    <span className="text-orange-600 font-medium">
+                      Still Active
+                    </span>
+                  ) : (
+                    "-"
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  };
 
   if (status === "loading" || loading) {
     return (
@@ -259,12 +505,18 @@ export default function Admin() {
                   <p className="text-blue-100 text-sm sm:text-base md:text-lg">
                     Member Management Dashboard
                   </p>
-                  <div className="flex justify-center sm:justify-start items-center mt-2">
+                  <div className="flex justify-center sm:justify-start items-center mt-2 space-x-2">
                     <span
                       className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${userColors.badgeBg} ${userColors.badgeText}`}
                     >
                       {currentUser?.position} Access
                     </span>
+                    <a
+                      href="/admin/products"
+                      className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-white/20 text-white hover:bg-white/30 transition-colors"
+                    >
+                      Manage Products
+                    </a>
                   </div>
                 </div>
               </div>
@@ -307,217 +559,27 @@ export default function Admin() {
                 </div>
               )}
 
-              {/* Search and Filters */}
-              <div className="mb-6 bg-gray-50 p-4 rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Search Members
-                    </label>
-                    <input
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Search by name, email, department, position, or provider..."
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Filter by Department
-                    </label>
-                    <select
-                      value={departmentFilter}
-                      onChange={(e) => setDepartmentFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">All Departments</option>
-                      {departments.map((dept) => (
-                        <option key={dept} value={dept}>
-                          {dept}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Filter by Position
-                    </label>
-                    <select
-                      value={positionFilter}
-                      onChange={(e) => setPositionFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">All Positions</option>
-                      {positions.map((pos) => (
-                        <option key={pos} value={pos}>
-                          {pos}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Filter by Activity
-                    </label>
-                    <select
-                      value={activityFilter}
-                      onChange={(e) => setActivityFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">All Members</option>
-                      <option value="active">Active Today</option>
-                      <option value="inactive">Not Active Today</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Members Table */}
-              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Member
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Department
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Position
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Login Status
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Time In
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Time Out
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Last Login
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredUsers.map((user) => {
-                        const memberColors = getUserColorTheme(
-                          user.position,
-                          user.department
-                        );
-                        return (
-                          <tr
-                            key={user.id}
-                            className="hover:bg-gray-50 cursor-pointer"
-                            onClick={() => handleUserRowClick(user)}
-                          >
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <div className="flex-shrink-0 h-10 w-10">
-                                  {user.image ? (
-                                    <Image
-                                      src={user.image}
-                                      alt={`${user.name}'s profile`}
-                                      width={40}
-                                      height={40}
-                                      className="h-10 w-10 rounded-full"
-                                    />
-                                  ) : (
-                                    <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                                      <span className="text-sm font-medium text-gray-600">
-                                        {user.name?.charAt(0).toUpperCase() ||
-                                          "U"}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="ml-4">
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {user.name}
-                                  </div>
-                                  <div className="text-sm text-gray-500">
-                                    {user.email}
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${memberColors.badgeBg} ${memberColors.badgeText}`}
-                              >
-                                {user.department || "Unassigned"}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {user.position || "Member"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {user.lastLoginToday ? (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                  Active Today
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                  Not Active
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {user.timeInToday
-                                ? formatTime(user.timeInToday)
-                                : "-"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {user.timeOutToday ? (
-                                formatTime(user.timeOutToday)
-                              ) : user.lastLoginToday ? (
-                                <span className="text-orange-600 font-medium">
-                                  Still Active
-                                </span>
-                              ) : (
-                                "-"
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {user.lastLoginTime
-                                ? formatDate(user.lastLoginTime)
-                                : "Never"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleResetPassword(user.id, user.email);
-                                }}
-                                disabled={resetLoading === user.id}
-                                className="text-orange-600 hover:text-orange-900 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                {resetLoading === user.id
-                                  ? "Sending..."
-                                  : "Reset Password"}
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {filteredUsers.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">
-                    No members found matching your criteria.
-                  </p>
-                </div>
-              )}
+              {/* Data Table */}
+              <DataTable
+                data={users}
+                columns={userColumns}
+                searchable
+                searchPlaceholder="Search by name, email, department, position, or provider..."
+                searchFields={[
+                  "name",
+                  "email",
+                  "position",
+                  "department",
+                  "provider",
+                  "id",
+                ]}
+                filters={filters}
+                computedFilters={computedFilters}
+                onRowClick={handleUserRowClick}
+                renderMobileCard={renderUserMobileCard}
+                emptyMessage="No members found matching your criteria."
+                loading={loading}
+              />
             </div>
           </div>
         </div>
@@ -537,9 +599,9 @@ export default function Admin() {
               </h2>
               <button
                 onClick={closeModal}
-                className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                className="text-white hover:text-gray-200 text-2xl font-bold"
               >
-                X
+                <IoClose />
               </button>
             </div>
 
@@ -579,114 +641,124 @@ export default function Admin() {
                     </div>
                   </div>
 
-                  {/* Attendance Records */}
-                  {selectedUser.attendance.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <p>No attendance records found for this user.</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Date
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {/* Attendance Records DataTable */}
+                  <DataTable
+                    data={selectedUser.attendance}
+                    dateFields={["date"]}
+                    timeFields={["timeIn", "timeOut"]}
+                    statusFields={["status"]}
+                    excludeColumns={[
+                      "_id",
+                      "userId",
+                      "timeInImage",
+                      "timeOutImage",
+                    ]}
+                    searchable
+                    searchPlaceholder="Search by date (e.g., 'July 31, 2025' or '2025-07-31')..."
+                    emptyMessage="No attendance records found for this user."
+                    defaultItemsPerPage={5}
+                    itemsPerPageOptions={[5, 10, 25]}
+                    renderMobileCard={(record) => (
+                      <>
+                        {/* Date Header */}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="text-sm font-medium text-gray-900">
+                            {formatDate(record.date)}
+                          </div>
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              record.timeOut
+                                ? "bg-green-100 text-green-800"
+                                : record.timeIn
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {record.timeOut
+                              ? "Complete"
+                              : record.timeIn
+                              ? "In Progress"
+                              : "Incomplete"}
+                          </span>
+                        </div>
+
+                        {/* Time Details Grid */}
+                        <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+                          <div>
+                            <div className="text-xs text-gray-500 mb-1">
                               Time In
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            </div>
+                            <div className="text-sm text-gray-900">
+                              {record.timeIn ? formatTime(record.timeIn) : "-"}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 mb-1">
                               Time Out
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            </div>
+                            <div className="text-sm text-gray-900">
+                              {record.timeOut
+                                ? formatTime(record.timeOut)
+                                : "-"}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Photos Section */}
+                        {(record.timeInImage || record.timeOutImage) && (
+                          <div className="pt-3 border-t border-gray-100">
+                            <div className="text-xs text-gray-500 mb-2">
                               Photos
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Status
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {selectedUser.attendance.map((record) => (
-                            <tr key={record._id} className="hover:bg-gray-50">
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {formatDate(record.date)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {record.timeIn
-                                  ? formatTime(record.timeIn)
-                                  : "-"}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {record.timeOut
-                                  ? formatTime(record.timeOut)
-                                  : "-"}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                <div className="flex gap-2">
-                                  {record.timeInImage && (
-                                    <Image
-                                      src={record.timeInImage.thumbnail}
-                                      alt="Time In Photo"
-                                      width={48}
-                                      height={48}
-                                      className="rounded-lg object-cover cursor-pointer border-2 border-green-200"
-                                      onClick={() =>
-                                        window.open(
-                                          record.timeInImage!.url,
-                                          "_blank"
-                                        )
-                                      }
-                                      title="Click to view Time In photo"
-                                    />
-                                  )}
-                                  {record.timeOutImage && (
-                                    <Image
-                                      src={record.timeOutImage.thumbnail}
-                                      alt="Time Out Photo"
-                                      width={48}
-                                      height={48}
-                                      className="rounded-lg object-cover cursor-pointer border-2 border-red-200"
-                                      onClick={() =>
-                                        window.open(
-                                          record.timeOutImage!.url,
-                                          "_blank"
-                                        )
-                                      }
-                                      title="Click to view Time Out photo"
-                                    />
-                                  )}
-                                  {!record.timeInImage &&
-                                    !record.timeOutImage && (
-                                      <span className="text-gray-400 text-xs">
-                                        No photos
-                                      </span>
-                                    )}
+                            </div>
+                            <div className="flex gap-2">
+                              {record.timeInImage && (
+                                <div className="text-center">
+                                  <Image
+                                    src={record.timeInImage.thumbnail}
+                                    alt="Time In Photo"
+                                    width={48}
+                                    height={48}
+                                    className="rounded-lg object-cover cursor-pointer border-2 border-green-200 mx-auto"
+                                    onClick={() =>
+                                      window.open(
+                                        record.timeInImage!.url,
+                                        "_blank"
+                                      )
+                                    }
+                                    title="Click to view Time In photo"
+                                  />
+                                  <div className="text-xs text-green-600 mt-1">
+                                    Time In
+                                  </div>
                                 </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span
-                                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                    record.timeOut
-                                      ? "bg-green-100 text-green-800"
-                                      : record.timeIn
-                                      ? "bg-yellow-100 text-yellow-800"
-                                      : "bg-gray-100 text-gray-800"
-                                  }`}
-                                >
-                                  {record.timeOut
-                                    ? "Complete"
-                                    : record.timeIn
-                                    ? "In Progress"
-                                    : "Incomplete"}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+                              )}
+                              {record.timeOutImage && (
+                                <div className="text-center">
+                                  <Image
+                                    src={record.timeOutImage.thumbnail}
+                                    alt="Time Out Photo"
+                                    width={48}
+                                    height={48}
+                                    className="rounded-lg object-cover cursor-pointer border-2 border-red-200 mx-auto"
+                                    onClick={() =>
+                                      window.open(
+                                        record.timeOutImage!.url,
+                                        "_blank"
+                                      )
+                                    }
+                                    title="Click to view Time Out photo"
+                                  />
+                                  <div className="text-xs text-red-600 mt-1">
+                                    Time Out
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  />
                 </>
               ) : null}
             </div>

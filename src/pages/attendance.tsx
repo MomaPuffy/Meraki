@@ -9,6 +9,7 @@ import {
   formatDateForDisplay,
   getPHTDateString,
 } from "@/utils/dateUtils";
+import DataTable, { Column } from "@/components/DataTable";
 
 export default function Attendance() {
   const { data: session, status } = useSession();
@@ -220,6 +221,170 @@ export default function Attendance() {
   const userColors = getUserColorTheme(
     userProfile?.position,
     userProfile?.department
+  );
+
+  // Define attendance table columns
+  const attendanceColumns: Column<AttendanceRecord>[] = [
+    {
+      key: "date",
+      header: "Date",
+      render: (record) => formatDate(record.date),
+    },
+    {
+      key: "timeIn",
+      header: "Time In",
+      centered: true,
+      render: (record) => (record.timeIn ? formatTime(record.timeIn) : "-"),
+    },
+    {
+      key: "timeOut",
+      header: "Time Out",
+      centered: true,
+      render: (record) => (record.timeOut ? formatTime(record.timeOut) : "-"),
+    },
+    {
+      key: "photos",
+      header: "Photos",
+      centered: true,
+      mobileHidden: true,
+      render: (record) => (
+        <div className="flex gap-2 justify-center">
+          {record.timeInImage && (
+            <Image
+              src={record.timeInImage.thumbnail}
+              alt="Time In Photo"
+              width={48}
+              height={48}
+              className="rounded-lg object-cover cursor-pointer border-2 border-green-200"
+              onClick={() => window.open(record.timeInImage!.url, "_blank")}
+              title="Click to view Time In photo"
+            />
+          )}
+          {record.timeOutImage && (
+            <Image
+              src={record.timeOutImage.thumbnail}
+              alt="Time Out Photo"
+              width={48}
+              height={48}
+              className="rounded-lg object-cover cursor-pointer border-2 border-red-200"
+              onClick={() => window.open(record.timeOutImage!.url, "_blank")}
+              title="Click to view Time Out photo"
+            />
+          )}
+          {!record.timeInImage && !record.timeOutImage && (
+            <span className="text-gray-400 text-xs">No photos</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      centered: true,
+      render: (record) => (
+        <span
+          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+            record.timeOut
+              ? "bg-green-100 text-green-800"
+              : record.timeIn
+              ? "bg-yellow-100 text-yellow-800"
+              : "bg-gray-100 text-gray-800"
+          }`}
+        >
+          {record.timeOut
+            ? "Complete"
+            : record.timeIn
+            ? "In Progress"
+            : "Incomplete"}
+        </span>
+      ),
+    },
+  ];
+
+  // Custom mobile card renderer for attendance records
+  const renderAttendanceMobileCard = (record: AttendanceRecord) => (
+    <>
+      {/* Date Header */}
+      <div className="flex items-center justify-between mb-3 gap-2">
+        <div className="text-sm font-medium text-gray-900 break-words flex-1">
+          {formatDate(record.date)}
+        </div>
+        <span
+          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full flex-shrink-0 ${
+            record.timeOut
+              ? "bg-green-100 text-green-800"
+              : record.timeIn
+              ? "bg-yellow-100 text-yellow-800"
+              : "bg-gray-100 text-gray-800"
+          }`}
+        >
+          {record.timeOut
+            ? "Complete"
+            : record.timeIn
+            ? "In Progress"
+            : "Incomplete"}
+        </span>
+      </div>
+
+      {/* Time Details Grid */}
+      <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+        <div className="space-y-1">
+          <div className="text-xs text-gray-500 mb-1">Time In</div>
+          <div className="text-sm text-gray-900 break-words">
+            {record.timeIn ? formatTime(record.timeIn) : "-"}
+          </div>
+        </div>
+        <div className="space-y-1">
+          <div className="text-xs text-gray-500 mb-1">Time Out</div>
+          <div className="text-sm text-gray-900 break-words">
+            {record.timeOut ? formatTime(record.timeOut) : "-"}
+          </div>
+        </div>
+      </div>
+
+      {/* Photos Section */}
+      {(record.timeInImage || record.timeOutImage) && (
+        <div className="pt-3 border-t border-gray-100">
+          <div className="text-xs text-gray-500 mb-2">Photos</div>
+          <div className="flex gap-2 flex-wrap">
+            {record.timeInImage && (
+              <div className="text-center flex-shrink-0">
+                <Image
+                  src={record.timeInImage.thumbnail}
+                  alt="Time In Photo"
+                  width={48}
+                  height={48}
+                  className="rounded-lg object-cover cursor-pointer border-2 border-green-200 mx-auto"
+                  onClick={() => window.open(record.timeInImage!.url, "_blank")}
+                  title="Click to view Time In photo"
+                />
+                <div className="text-xs text-green-600 mt-1 break-words">
+                  Time In
+                </div>
+              </div>
+            )}
+            {record.timeOutImage && (
+              <div className="text-center flex-shrink-0">
+                <Image
+                  src={record.timeOutImage.thumbnail}
+                  alt="Time Out Photo"
+                  width={48}
+                  height={48}
+                  className="rounded-lg object-cover cursor-pointer border-2 border-red-200 mx-auto"
+                  onClick={() =>
+                    window.open(record.timeOutImage!.url, "_blank")
+                  }
+                  title="Click to view Time Out photo"
+                />
+                <div className="text-xs text-red-600 mt-1 break-words">
+                  Time Out
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 
   return (
@@ -456,26 +621,7 @@ export default function Attendance() {
               </div>
             )}
 
-            {/* Message Display */}
-            {message && (
-              <div
-                className={`mb-6 p-4 rounded-lg ${
-                  message.includes("successfully")
-                    ? "bg-green-100 text-green-800 border border-green-200"
-                    : "bg-red-100 text-red-800 border border-red-200"
-                }`}
-              >
-                {message}
-                <button
-                  onClick={() => setMessage("")}
-                  className="float-right text-lg font-bold cursor-pointer"
-                >
-                  ×
-                </button>
-              </div>
-            )}
-
-            {/* Attendance Records Table */}
+            {/* Attendance Records DataTable */}
             <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -483,117 +629,18 @@ export default function Attendance() {
                 </h3>
               </div>
 
-              {attendanceRecords.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">
-                  <p>No attendance records found.</p>
-                  <p className="text-sm mt-2">
-                    Start by recording your first time-in!
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Date
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Time In
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Time Out
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Photos
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {attendanceRecords.map((record) => (
-                        <tr key={record._id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {formatDate(record.date)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {record.timeIn ? formatTime(record.timeIn) : "-"}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {record.timeOut ? formatTime(record.timeOut) : "-"}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            <div className="flex gap-2">
-                              {record.timeInImage && (
-                                <Image
-                                  src={record.timeInImage.thumbnail}
-                                  alt="Time In Photo"
-                                  width={48}
-                                  height={48}
-                                  className="rounded-lg object-cover cursor-pointer border-2 border-green-200"
-                                  onClick={() =>
-                                    window.open(
-                                      record.timeInImage!.url,
-                                      "_blank"
-                                    )
-                                  }
-                                  title="Click to view Time In photo"
-                                />
-                              )}
-                              {record.timeOutImage && (
-                                <Image
-                                  src={record.timeOutImage.thumbnail}
-                                  alt="Time Out Photo"
-                                  width={48}
-                                  height={48}
-                                  className="rounded-lg object-cover cursor-pointer border-2 border-red-200"
-                                  onClick={() =>
-                                    window.open(
-                                      record.timeOutImage!.url,
-                                      "_blank"
-                                    )
-                                  }
-                                  title="Click to view Time Out photo"
-                                />
-                              )}
-                              {!record.timeInImage && !record.timeOutImage && (
-                                <span className="text-gray-400 text-xs">
-                                  No photos
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span
-                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                record.timeOut
-                                  ? "bg-green-100 text-green-800"
-                                  : record.timeIn
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-gray-100 text-gray-800"
-                              }`}
-                            >
-                              {record.timeOut
-                                ? "Complete"
-                                : record.timeIn
-                                ? "In Progress"
-                                : "Incomplete"}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {attendanceRecords.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No attendance records found.</p>
-                </div>
-              )}
+              <div className="p-6">
+                <DataTable
+                  data={attendanceRecords}
+                  columns={attendanceColumns} // Use the custom columns instead of auto-generation
+                  renderMobileCard={renderAttendanceMobileCard} // Use the custom mobile card renderer
+                  searchable
+                  searchPlaceholder="Search by date (e.g., 'July 31, 2025' or '2025-07-31')..."
+                  emptyMessage="No attendance records found. Start by recording your first time-in!"
+                  defaultItemsPerPage={10}
+                  itemsPerPageOptions={[5, 10, 25, 50]}
+                />
+              </div>
             </div>
           </div>
         </div>
