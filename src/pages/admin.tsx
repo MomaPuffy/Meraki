@@ -3,7 +3,7 @@ import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { getUserColorTheme } from "@/lib/colorConfig";
 import { formatTimeForDisplay, formatDateForDisplay } from "@/utils/dateUtils";
-import { UserData, UserAttendanceModalData } from "@/types";
+import { UserData, UserAttendanceModalData, AttendanceRecord } from "@/types";
 import { isAdminPosition } from "@/utils/adminRoles";
 import { IoClose } from "react-icons/io5";
 import DataTable, { Column, FilterOption } from "@/components/DataTable";
@@ -148,6 +148,170 @@ export default function Admin() {
   const formatDate = (dateString: string) => {
     return formatDateForDisplay(dateString, false);
   };
+
+  // Define attendance table columns (matching attendance page)
+  const attendanceColumns: Column<AttendanceRecord>[] = [
+    {
+      key: "date",
+      header: "Date",
+      render: (record) => formatDate(record.date),
+    },
+    {
+      key: "timeIn",
+      header: "Time In",
+      centered: true,
+      render: (record) => (record.timeIn ? formatTime(record.timeIn) : "-"),
+    },
+    {
+      key: "timeOut",
+      header: "Time Out",
+      centered: true,
+      render: (record) => (record.timeOut ? formatTime(record.timeOut) : "-"),
+    },
+    {
+      key: "photos",
+      header: "Photos",
+      centered: true,
+      mobileHidden: true,
+      render: (record) => (
+        <div className="flex gap-2 justify-center">
+          {record.timeInImage && (
+            <Image
+              src={record.timeInImage.thumbnail}
+              alt="Time In Photo"
+              width={48}
+              height={48}
+              className="rounded-lg object-cover cursor-pointer border-2 border-green-200"
+              onClick={() => window.open(record.timeInImage!.url, "_blank")}
+              title="Click to view Time In photo"
+            />
+          )}
+          {record.timeOutImage && (
+            <Image
+              src={record.timeOutImage.thumbnail}
+              alt="Time Out Photo"
+              width={48}
+              height={48}
+              className="rounded-lg object-cover cursor-pointer border-2 border-red-200"
+              onClick={() => window.open(record.timeOutImage!.url, "_blank")}
+              title="Click to view Time Out photo"
+            />
+          )}
+          {!record.timeInImage && !record.timeOutImage && (
+            <span className="text-gray-400 text-xs">No photos</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      centered: true,
+      render: (record) => (
+        <span
+          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+            record.timeOut
+              ? "bg-green-100 text-green-800"
+              : record.timeIn
+              ? "bg-yellow-100 text-yellow-800"
+              : "bg-gray-100 text-gray-800"
+          }`}
+        >
+          {record.timeOut
+            ? "Complete"
+            : record.timeIn
+            ? "In Progress"
+            : "Incomplete"}
+        </span>
+      ),
+    },
+  ];
+
+  // Custom mobile card renderer for attendance records (matching attendance page)
+  const renderAttendanceMobileCard = (record: AttendanceRecord) => (
+    <>
+      {/* Date Header */}
+      <div className="flex items-center justify-between mb-3 gap-2">
+        <div className="text-sm font-medium text-gray-900 break-words flex-1">
+          {formatDate(record.date)}
+        </div>
+        <span
+          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full flex-shrink-0 ${
+            record.timeOut
+              ? "bg-green-100 text-green-800"
+              : record.timeIn
+              ? "bg-yellow-100 text-yellow-800"
+              : "bg-gray-100 text-gray-800"
+          }`}
+        >
+          {record.timeOut
+            ? "Complete"
+            : record.timeIn
+            ? "In Progress"
+            : "Incomplete"}
+        </span>
+      </div>
+
+      {/* Time Details Grid */}
+      <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+        <div className="space-y-1">
+          <div className="text-xs text-gray-500 mb-1">Time In</div>
+          <div className="text-sm text-gray-900 break-words">
+            {record.timeIn ? formatTime(record.timeIn) : "-"}
+          </div>
+        </div>
+        <div className="space-y-1">
+          <div className="text-xs text-gray-500 mb-1">Time Out</div>
+          <div className="text-sm text-gray-900 break-words">
+            {record.timeOut ? formatTime(record.timeOut) : "-"}
+          </div>
+        </div>
+      </div>
+
+      {/* Photos Section */}
+      {(record.timeInImage || record.timeOutImage) && (
+        <div className="pt-3 border-t border-gray-100">
+          <div className="text-xs text-gray-500 mb-2">Photos</div>
+          <div className="flex gap-2 flex-wrap">
+            {record.timeInImage && (
+              <div className="text-center flex-shrink-0">
+                <Image
+                  src={record.timeInImage.thumbnail}
+                  alt="Time In Photo"
+                  width={48}
+                  height={48}
+                  className="rounded-lg object-cover cursor-pointer border-2 border-green-200 mx-auto"
+                  onClick={() => window.open(record.timeInImage!.url, "_blank")}
+                  title="Click to view Time In photo"
+                />
+                <div className="text-xs text-green-600 mt-1 break-words">
+                  Time In
+                </div>
+              </div>
+            )}
+            {record.timeOutImage && (
+              <div className="text-center flex-shrink-0">
+                <Image
+                  src={record.timeOutImage.thumbnail}
+                  alt="Time Out Photo"
+                  width={48}
+                  height={48}
+                  className="rounded-lg object-cover cursor-pointer border-2 border-red-200 mx-auto"
+                  onClick={() =>
+                    window.open(record.timeOutImage!.url, "_blank")
+                  }
+                  title="Click to view Time Out photo"
+                />
+                <div className="text-xs text-red-600 mt-1 break-words">
+                  Time Out
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
 
   // Get unique departments and positions for filters
   const departments = [
@@ -649,139 +813,18 @@ export default function Admin() {
                   </div>
 
                   {/* Attendance Records DataTable */}
-                  <DataTable
-                    data={
-                      selectedUser.attendance as unknown as Record<
-                        string,
-                        unknown
-                      >[]
-                    }
-                    dateFields={["date"]}
-                    timeFields={["timeIn", "timeOut"]}
-                    statusFields={["status"]}
-                    excludeColumns={[
-                      "_id",
-                      "userId",
-                      "timeInImage",
-                      "timeOutImage",
-                    ]}
-                    searchable
-                    searchPlaceholder="Search by date (e.g., 'July 31, 2025' or '2025-07-31')..."
-                    emptyMessage="No attendance records found for this user."
-                    defaultItemsPerPage={5}
-                    itemsPerPageOptions={[5, 10, 25]}
-                    renderMobileCard={(record) => {
-                      const attendanceRecord =
-                        record as unknown as UserAttendanceModalData["attendance"][number];
-                      return (
-                        <>
-                          {/* Date Header */}
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="text-sm font-medium text-gray-900">
-                              {formatDate(attendanceRecord.date)}
-                            </div>
-                            <span
-                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                attendanceRecord.timeOut
-                                  ? "bg-green-100 text-green-800"
-                                  : attendanceRecord.timeIn
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-gray-100 text-gray-800"
-                              }`}
-                            >
-                              {attendanceRecord.timeOut
-                                ? "Complete"
-                                : attendanceRecord.timeIn
-                                ? "In Progress"
-                                : "Incomplete"}
-                            </span>
-                          </div>
-
-                          {/* Time Details Grid */}
-                          <div className="grid grid-cols-2 gap-3 text-sm mb-3">
-                            <div>
-                              <div className="text-xs text-gray-500 mb-1">
-                                Time In
-                              </div>
-                              <div className="text-sm text-gray-900">
-                                {attendanceRecord.timeIn
-                                  ? formatTime(attendanceRecord.timeIn)
-                                  : "-"}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-xs text-gray-500 mb-1">
-                                Time Out
-                              </div>
-                              <div className="text-sm text-gray-900">
-                                {attendanceRecord.timeOut
-                                  ? formatTime(attendanceRecord.timeOut)
-                                  : "-"}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Photos Section */}
-                          {(attendanceRecord.timeInImage ||
-                            attendanceRecord.timeOutImage) && (
-                            <div className="pt-3 border-t border-gray-100">
-                              <div className="text-xs text-gray-500 mb-2">
-                                Photos
-                              </div>
-                              <div className="flex gap-2">
-                                {attendanceRecord.timeInImage && (
-                                  <div className="text-center">
-                                    <Image
-                                      src={
-                                        attendanceRecord.timeInImage.thumbnail
-                                      }
-                                      alt="Time In Photo"
-                                      width={48}
-                                      height={48}
-                                      className="rounded-lg object-cover cursor-pointer border-2 border-green-200 mx-auto"
-                                      onClick={() =>
-                                        window.open(
-                                          attendanceRecord.timeInImage!.url,
-                                          "_blank"
-                                        )
-                                      }
-                                      title="Click to view Time In photo"
-                                    />
-                                    <div className="text-xs text-green-600 mt-1">
-                                      Time In
-                                    </div>
-                                  </div>
-                                )}
-                                {attendanceRecord.timeOutImage && (
-                                  <div className="text-center">
-                                    <Image
-                                      src={
-                                        attendanceRecord.timeOutImage.thumbnail
-                                      }
-                                      alt="Time Out Photo"
-                                      width={48}
-                                      height={48}
-                                      className="rounded-lg object-cover cursor-pointer border-2 border-red-200 mx-auto"
-                                      onClick={() =>
-                                        window.open(
-                                          attendanceRecord.timeOutImage!.url,
-                                          "_blank"
-                                        )
-                                      }
-                                      title="Click to view Time Out photo"
-                                    />
-                                    <div className="text-xs text-red-600 mt-1">
-                                      Time Out
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </>
-                      );
-                    }}
-                  />
+                  <div className="p-6">
+                    <DataTable
+                      data={selectedUser.attendance}
+                      columns={attendanceColumns}
+                      renderMobileCard={renderAttendanceMobileCard}
+                      searchable
+                      searchPlaceholder="Search by date (e.g., 'July 31, 2025' or '2025-07-31')..."
+                      emptyMessage="No attendance records found for this user."
+                      defaultItemsPerPage={10}
+                      itemsPerPageOptions={[5, 10, 25, 50]}
+                    />
+                  </div>
                 </>
               ) : null}
             </div>
