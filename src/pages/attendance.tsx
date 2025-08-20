@@ -75,9 +75,18 @@ export default function Attendance() {
     }
   };
 
+  const isIOSSafari = () => {
+    return (
+      typeof navigator !== "undefined" &&
+      /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+      !("MSStream" in window)
+    );
+  };
+
   const startCamera = async (type: "time-in" | "time-out") => {
     setActionType(type);
     setShowCamera(true);
+
     try {
       // Enumerate available video input devices and remember them so the user
       // can switch between cameras.
@@ -87,11 +96,17 @@ export default function Attendance() {
 
       // Choose a deviceId to use: prefer previously selected, otherwise first
       // available. If none available, fall back to generic video constraint.
-      let constraints: MediaStreamConstraints = { video: true };
-      if (videoInputs.length > 0) {
+      let constraints: MediaStreamConstraints;
+
+      if (isIOSSafari()) {
+        constraints = { video: { facingMode: "environment" } };
+        setSelectedDeviceId("environment");
+      } else if (videoInputs.length > 0) {
         const deviceIdToUse = selectedDeviceId || videoInputs[0].deviceId;
         setSelectedDeviceId(deviceIdToUse);
         constraints = { video: { deviceId: { exact: deviceIdToUse } } };
+      } else {
+        constraints = { video: true };
       }
 
       // Stop any existing stream before starting a new one.
@@ -115,26 +130,48 @@ export default function Attendance() {
   // with front/back cameras). This restarts the stream with the next device.
   const switchCamera = async () => {
     try {
-      if (!navigator.mediaDevices || videoDevices.length < 2) return;
+      if (!navigator.mediaDevices) return;
+
+      if (isIOSSafari()) {
+        const newFacingMode =
+          selectedDeviceId === "user" ? "environment" : "user";
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { exact: newFacingMode } },
+        });
+
+        if (videoRef.current) {
+          const existing = videoRef.current.srcObject as MediaStream | null;
+          existing?.getTracks().forEach((t) => t.stop());
+
+          videoRef.current.srcObject = stream;
+        }
+
+        setSelectedDeviceId(newFacingMode);
+        return;
+      }
+
+      if (videoDevices.length < 2) return;
+
       const currentIndex = videoDevices.findIndex(
         (d) => d.deviceId === selectedDeviceId
       );
+
       const nextIndex = (currentIndex + 1) % videoDevices.length;
       const nextDevice = videoDevices[nextIndex];
-
-      // Stop existing stream
-      if (videoRef.current) {
-        const existing = videoRef.current.srcObject as MediaStream | null;
-        existing?.getTracks().forEach((t) => t.stop());
-      }
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { deviceId: { exact: nextDevice.deviceId } },
       });
-      setSelectedDeviceId(nextDevice.deviceId);
+
       if (videoRef.current) {
+        const existing = videoRef.current.srcObject as MediaStream | null;
+        existing?.getTracks().forEach((t) => t.stop());
+
         videoRef.current.srcObject = stream;
       }
+
+      setSelectedDeviceId(nextDevice.deviceId);
     } catch (err) {
       console.error("Switch camera error:", err);
       // If switching fails, do not close the modal; inform the user.
@@ -183,11 +220,6 @@ export default function Attendance() {
       if (response.ok) {
         setMessage(data.message);
         fetchAttendanceRecords(); // Refresh the table
-
-        // Auto-reload page after successful attendance recording
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000); // 2 second delay to show success message
       } else {
         setMessage(data.error || "Failed to record attendance");
       }
