@@ -8,24 +8,32 @@ import { useAuth } from "@/hooks/useAuth";
 
 // gallery comes from the API
 
+type GalleryItem = {
+  _id?: string;
+  id?: string;
+  title: string;
+  category: string;
+  src: string;
+  likes?: number;
+  likedBy?: string[];
+};
+
 const CATEGORIES = ["All", "Digital", "Traditional", "Animation", "Cosplay"];
 
 export default function Home() {
   const [filter, setFilter] = useState<string>("All");
-  const [gallery, setGallery] = useState<Array<any>>([]);
-  const [loading, setLoading] = useState(false);
+  const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const { isAdmin } = useAuth();
   const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    setLoading(true);
     fetch("/api/gallery")
       .then((r) => r.json())
       .then((data) => {
         setGallery(data.items || []);
       })
       .catch((e) => console.error(e))
-      .finally(() => setLoading(false));
+      .finally(() => {});
   }, []);
 
   const filtered =
@@ -190,10 +198,12 @@ export default function Home() {
                   />
                 </div>
                 {filePreview && (
-                  <img
+                  <Image
                     src={filePreview}
                     alt="preview"
-                    className="w-16 h-16 object-cover rounded border"
+                    width={64}
+                    height={64}
+                    className="object-cover rounded border"
                   />
                 )}
                 <button

@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth";
 import clientPromise from "@/lib/mongodb";
 import { authOptions } from "../../auth/[...nextauth]";
-import { ObjectId } from "mongodb";
+import { ObjectId, UpdateFilter, Document } from "mongodb";
 
 export default async function handler(
   req: NextApiRequest,
@@ -34,22 +34,24 @@ export default async function handler(
     const alreadyLiked = likedBy.includes(userId);
 
     if (alreadyLiked) {
+      const update = {
+        $pull: { likedBy: { $eq: userId } },
+        $inc: { likes: -1 },
+      } as unknown as UpdateFilter<Document>;
       const updateRes = await db
         .collection("gallery")
-        .updateOne({ _id: galleryId }, {
-          $pull: { likedBy: userId },
-          $inc: { likes: -1 },
-        } as unknown as any);
+        .updateOne({ _id: galleryId }, update);
       if (!updateRes || updateRes.matchedCount === 0) {
         return res.status(500).json({ message: "Failed to update like" });
       }
     } else {
+      const update = {
+        $addToSet: { likedBy: userId },
+        $inc: { likes: 1 },
+      } as unknown as UpdateFilter<Document>;
       const updateRes = await db
         .collection("gallery")
-        .updateOne({ _id: galleryId }, {
-          $addToSet: { likedBy: userId },
-          $inc: { likes: 1 },
-        } as unknown as any);
+        .updateOne({ _id: galleryId }, update);
       if (!updateRes || updateRes.matchedCount === 0) {
         return res.status(500).json({ message: "Failed to update like" });
       }
