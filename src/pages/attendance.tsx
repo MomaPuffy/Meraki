@@ -699,7 +699,7 @@ export default function Attendance() {
                     </button>
 
                     {/* ✅ Always show on iOS, or when multiple cameras exist */}
-                    {(videoDevices.length > 1 || isIOSSafari()) && (
+                    {(isIOSSafari() || videoDevices.length > 1) && (
                       <button
                         onClick={switchCamera}
                         className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white py-2 rounded-lg"
