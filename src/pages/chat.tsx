@@ -139,7 +139,7 @@ export default function ChatPage() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-200 flex justify-center items-center">
+      <div className="min-h-screen flex justify-center items-center">
         <div className="bg-white p-8 rounded-lg shadow-lg">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="text-center mt-4 text-gray-600">Loading chat...</p>
@@ -150,7 +150,7 @@ export default function ChatPage() {
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-200 flex justify-center items-center">
+      <div className="min-h-screen flex justify-center items-center">
         <div className="bg-white p-8 rounded-lg shadow-lg text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">
             Access Denied
@@ -169,7 +169,7 @@ export default function ChatPage() {
   const currentUserImage = session?.user?.image || undefined;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-200 py-4 px-4">
+    <div className="min-h-screen py-4 px-4">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-[calc(100vh-8rem)]">
           {/* Sidebar */}

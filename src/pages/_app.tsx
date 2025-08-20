@@ -12,7 +12,13 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const isLoginPage = router.pathname === "/login";
 
-  const publicRoutes = ["/login", "/register", "/forgot-password", "/public"];
+  const publicRoutes = [
+    "/",
+    "/login",
+    "/register",
+    "/forgot-password",
+    "/public",
+  ];
   const isPublicRoute =
     publicRoutes.includes(router.pathname) ||
     router.pathname.startsWith("/public/");
@@ -38,7 +44,7 @@ export default function MyApp({ Component, pageProps }: AppProps) {
     <SessionProvider session={pageProps.session}>
       <CalendarProvider>
         <AuthGuard>
-          <div className="min-h-screen bg-gray-100 text-black">
+          <div className="min-h-screen bg-gradient-to-br from-gray-100 to-purple-300 text-black">
             <Navbar />
             <Component {...pageProps} />
             <Footer />

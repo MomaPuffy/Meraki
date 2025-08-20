@@ -30,7 +30,7 @@ export default function Home() {
     filter === "All" ? GALLERY : GALLERY.filter((g) => g.category === filter);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-gray-50 to-purple-50">
+    <main className="min-h-screen">
       {/* Hero */}
       <section className="py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-8">
@@ -46,7 +46,7 @@ export default function Home() {
 
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
-                href="/register"
+                href="/login"
                 className="inline-flex items-center px-4 py-2 bg-purple-700 text-white rounded-md shadow-sm hover:bg-purple-800"
               >
                 Join the Club

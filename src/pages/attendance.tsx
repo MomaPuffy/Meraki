@@ -178,7 +178,7 @@ export default function Attendance() {
     return (
       <>
         <Navbar />
-        <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-200 flex justify-center items-center px-4">
+        <div className="min-h-screen flex justify-center items-center px-4">
           <div className="bg-white p-6 sm:p-8 rounded-lg shadow-lg max-w-sm w-full">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
             <p className="text-center mt-4 text-gray-600 text-sm sm:text-base">
@@ -192,7 +192,7 @@ export default function Attendance() {
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-200 flex justify-center items-center px-4">
+      <div className="min-h-screen flex justify-center items-center px-4">
         <div className="bg-white p-6 sm:p-8 rounded-lg shadow-lg text-center max-w-sm w-full">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">
             Access Denied
@@ -207,7 +207,7 @@ export default function Attendance() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-200 flex justify-center items-center px-4">
+      <div className="min-h-screen flex justify-center items-center px-4">
         <div className="bg-white p-6 sm:p-8 rounded-lg shadow-lg text-center max-w-sm w-full">
           <h1 className="text-xl sm:text-2xl font-bold text-red-600 mb-4">
             Error
@@ -388,7 +388,7 @@ export default function Attendance() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-200 py-4 sm:py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen py-4 sm:py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           {/* Header Section */}

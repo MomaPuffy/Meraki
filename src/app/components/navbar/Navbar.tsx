@@ -55,7 +55,7 @@ export default function Navbar() {
   return (
     <nav className="flex w-full h-15 bg-[#252525] sticky top-0 z-50">
       {/* Logo Section */}
-      <Link href="/public" className="flex items-center mx-2 space-x-2">
+      <Link href="/" className="flex items-center mx-2 space-x-2">
         <Image src="/meraki.png" alt="Meraki logo" width={40} height={40} />
         <span className="text-xl sm:text-2xl leading-none text-white">
           Meraki
@@ -70,10 +70,10 @@ export default function Navbar() {
         <ul className="flex items-center justify-end w-full mx-1 relative space-x-2 leading-none text-lg text-white">
           <li>
             <Link
-              href="/"
+              href="/dashboard"
               className="hover:border-b-white hover:border-b-1 px-2 py-1"
             >
-              Home
+              Dashboard
             </Link>
           </li>
           <li>

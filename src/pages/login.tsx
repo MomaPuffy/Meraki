@@ -43,7 +43,7 @@ export default function Login() {
           setError("Invalid email or password");
         }
       } else if (result?.ok) {
-        router.push("/");
+        router.push("/dashboard");
       }
     } else {
       // Register new user
@@ -67,7 +67,7 @@ export default function Login() {
           });
 
           if (result?.ok) {
-            router.push("/");
+            router.push("/dashboard");
           }
         } else {
           setError(data.message || "Registration failed");
@@ -82,7 +82,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-200 flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-10 px-8 shadow-lg rounded-lg flex flex-col items-center">
           <Image
