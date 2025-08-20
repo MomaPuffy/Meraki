@@ -33,9 +33,24 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [session, status, isPublicRoute, isLoginPage, router]);
 
-  if (status === "loading") return null;
-  if (!session && !isPublicRoute) return null;
-  if (session && isLoginPage) return null;
+  if (status === "loading")
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+        <p>Checking authentication...</p>
+      </div>
+    );
+  if (!session && !isPublicRoute)
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+        <p>Redirecting to login...</p>
+      </div>
+    );
+  if (session && isLoginPage)
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+        <p>Redirecting...</p>
+      </div>
+    );
   return <>{children}</>;
 }
 

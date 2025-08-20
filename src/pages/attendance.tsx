@@ -25,6 +25,8 @@ export default function Attendance() {
   const [actionType, setActionType] = useState<"time-in" | "time-out" | null>(
     null
   );
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -77,7 +79,28 @@ export default function Attendance() {
     setActionType(type);
     setShowCamera(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      // Enumerate available video input devices and remember them so the user
+      // can switch between cameras.
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoInputs = devices.filter((d) => d.kind === "videoinput");
+      setVideoDevices(videoInputs);
+
+      // Choose a deviceId to use: prefer previously selected, otherwise first
+      // available. If none available, fall back to generic video constraint.
+      let constraints: MediaStreamConstraints = { video: true };
+      if (videoInputs.length > 0) {
+        const deviceIdToUse = selectedDeviceId || videoInputs[0].deviceId;
+        setSelectedDeviceId(deviceIdToUse);
+        constraints = { video: { deviceId: { exact: deviceIdToUse } } };
+      }
+
+      // Stop any existing stream before starting a new one.
+      if (videoRef.current) {
+        const existing = videoRef.current.srcObject as MediaStream | null;
+        existing?.getTracks().forEach((t) => t.stop());
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
@@ -85,6 +108,37 @@ export default function Attendance() {
       console.error("Camera access error:", error);
       setMessage("Camera access denied");
       setShowCamera(false);
+    }
+  };
+
+  // Cycle through available video input devices (useful on mobile / laptops
+  // with front/back cameras). This restarts the stream with the next device.
+  const switchCamera = async () => {
+    try {
+      if (!navigator.mediaDevices || videoDevices.length < 2) return;
+      const currentIndex = videoDevices.findIndex(
+        (d) => d.deviceId === selectedDeviceId
+      );
+      const nextIndex = (currentIndex + 1) % videoDevices.length;
+      const nextDevice = videoDevices[nextIndex];
+
+      // Stop existing stream
+      if (videoRef.current) {
+        const existing = videoRef.current.srcObject as MediaStream | null;
+        existing?.getTracks().forEach((t) => t.stop());
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: { exact: nextDevice.deviceId } },
+      });
+      setSelectedDeviceId(nextDevice.deviceId);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error("Switch camera error:", err);
+      // If switching fails, do not close the modal; inform the user.
+      setMessage("Unable to switch camera on this device/browser.");
     }
   };
 
@@ -610,6 +664,18 @@ export default function Attendance() {
                     >
                       Capture Photo
                     </button>
+
+                    {/* Switch camera only shown if there's more than one device */}
+                    {videoDevices.length > 1 && (
+                      <button
+                        onClick={switchCamera}
+                        className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white py-2 rounded-lg"
+                        title={selectedDeviceId || undefined}
+                      >
+                        Switch Camera
+                      </button>
+                    )}
+
                     <button
                       onClick={cancelCamera}
                       className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg"

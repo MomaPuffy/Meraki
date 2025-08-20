@@ -1,39 +1,112 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import UpcomingEvents from "@/app/components/calendar/UpcomingEvents";
+import { useAuth } from "@/hooks/useAuth";
 
-const GALLERY = [
-  { id: 1, title: "Neon Skyline", category: "Digital", src: "/meraki.png" },
-  {
-    id: 2,
-    title: "Portrait Study",
-    category: "Traditional",
-    src: "/window.svg",
-  },
-  { id: 3, title: "Walk Cycle", category: "Animation", src: "/next.svg" },
-  { id: 4, title: "Cosplay Spotlight", category: "Cosplay", src: "/globe.svg" },
-  { id: 5, title: "Pixel Scene", category: "Digital", src: "/file.svg" },
-  { id: 6, title: "Ink Sketch", category: "Traditional", src: "/vercel.svg" },
-  { id: 7, title: "Looping GIF", category: "Animation", src: "/window.svg" },
-  { id: 8, title: "Armor Build", category: "Cosplay", src: "/meraki.png" },
-];
+// gallery comes from the API
 
 const CATEGORIES = ["All", "Digital", "Traditional", "Animation", "Cosplay"];
 
 export default function Home() {
   const [filter, setFilter] = useState<string>("All");
+  const [gallery, setGallery] = useState<Array<any>>([]);
+  const [loading, setLoading] = useState(false);
+  const { isAdmin } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    setLoading(true);
+    fetch("/api/gallery")
+      .then((r) => r.json())
+      .then((data) => {
+        setGallery(data.items || []);
+      })
+      .catch((e) => console.error(e))
+      .finally(() => setLoading(false));
+  }, []);
 
   const filtered =
-    filter === "All" ? GALLERY : GALLERY.filter((g) => g.category === filter);
+    filter === "All" ? gallery : gallery.filter((g) => g.category === filter);
+
+  // admin form state
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState(CATEGORIES[1]);
+  const [src, setSrc] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // require title + category and either a provided src URL or a selected file
+    if (!title || !category || (!src && !file)) {
+      alert(
+        "Please provide a title, category and either choose a file or enter an image URL."
+      );
+      return;
+    }
+    setSubmitting(true);
+    try {
+      let imageBase64: string | undefined = undefined;
+      if (file) {
+        // convert file to base64
+        imageBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      const res = await fetch("/api/gallery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, category, src, imageBase64 }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setGallery((g) => [json.item, ...g]);
+        setTitle("");
+        setSrc("");
+        setFile(null);
+        setFilePreview(null);
+        setCategory(CATEGORIES[1]);
+      } else {
+        const err = await res.json();
+        console.error(err);
+        alert(err.message || "Could not add item");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onFileChange = (f?: File) => {
+    if (!f) {
+      if (filePreview) {
+        URL.revokeObjectURL(filePreview);
+      }
+      setFile(null);
+      setFilePreview(null);
+      return;
+    }
+    // revoke previous preview if present
+    if (filePreview) URL.revokeObjectURL(filePreview);
+    setFile(f);
+    const url = URL.createObjectURL(f);
+    setFilePreview(url);
+  };
 
   return (
     <main className="min-h-screen">
       {/* Hero */}
-      <section className="py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-8">
+      <section className="py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-6">
           <div className="flex-1">
             <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900">
               Meraki Art Club
@@ -58,30 +131,15 @@ export default function Home() {
                 Explore the Gallery
               </a>
             </div>
-
-            <div className="mt-8 grid grid-cols-3 gap-4 max-w-md">
-              <div className="bg-white rounded-lg p-4 text-center shadow">
-                <div className="text-xl font-bold">1.2k</div>
-                <div className="text-sm text-gray-500">Members</div>
-              </div>
-              <div className="bg-white rounded-lg p-4 text-center shadow">
-                <div className="text-xl font-bold">48</div>
-                <div className="text-sm text-gray-500">Events</div>
-              </div>
-              <div className="bg-white rounded-lg p-4 text-center shadow">
-                <div className="text-xl font-bold">4.8k</div>
-                <div className="text-sm text-gray-500">Artworks</div>
-              </div>
-            </div>
           </div>
 
-          <div className="flex-1 w-full max-w-xl">
-            <div className="rounded-lg overflow-hidden shadow-lg bg-white p-6">
+          <div className="flex-1 w-full md:max-w-xl">
+            <div className="rounded-lg overflow-hidden shadow-lg bg-white p-6 flex flex-col items-center text-center">
               <Image
                 src="/meraki.png"
                 alt="Meraki Logo"
                 width={520}
-                height={320}
+                height={520}
                 className="object-cover rounded"
               />
               <p className="mt-4 text-sm text-gray-500">
@@ -97,11 +155,57 @@ export default function Home() {
       {/* Gallery */}
       <section id="gallery" className="py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-start justify-between mb-6 flex-col sm:flex-row sm:items-center gap-4">
             <h2 className="text-2xl font-semibold text-gray-900">
               Community Gallery
             </h2>
-            <div className="flex items-center gap-2">
+            {isAdmin && (
+              <form
+                onSubmit={handleAdd}
+                className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto"
+              >
+                <input
+                  placeholder="Title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="px-2 py-1 rounded border w-full sm:w-40"
+                />
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="px-3 py-2 rounded border w-full sm:w-32 text-sm"
+                >
+                  {CATEGORIES.slice(1).map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => onFileChange(e.target.files?.[0])}
+                    className="px-2 py-1 rounded border w-full sm:w-40 text-sm"
+                  />
+                </div>
+                {filePreview && (
+                  <img
+                    src={filePreview}
+                    alt="preview"
+                    className="w-16 h-16 object-cover rounded border"
+                  />
+                )}
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-3 py-1 rounded bg-purple-600 text-white text-sm w-full sm:w-auto"
+                >
+                  {submitting ? "Adding..." : "Add"}
+                </button>
+              </form>
+            )}
+            <div className="flex gap-2 flex-wrap sm:flex-nowrap sm:overflow-x-auto sm:pb-2">
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat}
@@ -118,43 +222,85 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {filtered.map((item) => (
-              <figure
-                key={item.id}
-                className="bg-white rounded-lg overflow-hidden shadow group"
-              >
-                <div className="relative w-full h-40 sm:h-44">
-                  <Image
-                    src={item.src}
-                    alt={item.title}
-                    fill
-                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                    className="object-cover"
-                  />
-                </div>
-                <figcaption className="p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {item.title}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {filtered.map((item) => {
+              const likedBy: string[] = item.likedBy || [];
+              const isLiked = user && likedBy.includes(user.id);
+              return (
+                <figure
+                  key={item._id ?? item.id}
+                  className="bg-white rounded-lg overflow-hidden shadow group"
+                >
+                  <div className="relative w-full h-40 sm:h-44">
+                    <Image
+                      src={item.src}
+                      alt={item.title}
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      className="object-cover"
+                    />
+                  </div>
+                  <figcaption className="p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {item.title}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {item.category}
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {item.category}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={async () => {
+                            if (!isAuthenticated) {
+                              alert("Please log in to like items.");
+                              return;
+                            }
+                            try {
+                              const res = await fetch(
+                                `/api/gallery/${item._id}/like`,
+                                {
+                                  method: "POST",
+                                }
+                              );
+                              if (res.ok) {
+                                const json = await res.json();
+                                // update item in gallery list
+                                setGallery((g) =>
+                                  g.map((it) =>
+                                    it._id === json.item._id ? json.item : it
+                                  )
+                                );
+                              } else {
+                                const err = await res.json();
+                                console.error(err);
+                              }
+                            } catch (err) {
+                              console.error(err);
+                            }
+                          }}
+                          className="text-sm"
+                          aria-label={isLiked ? "Unlike" : "Like"}
+                        >
+                          {isLiked ? "❤️" : "🤍"}
+                        </button>
+                        <div className="text-xs text-gray-400">
+                          {item.likes ?? 0}
+                        </div>
                       </div>
                     </div>
-                    <div className="text-xs text-gray-400">❤️ 128</div>
-                  </div>
-                </figcaption>
-              </figure>
-            ))}
+                  </figcaption>
+                </figure>
+              );
+            })}
           </div>
         </div>
       </section>
 
       {/* Events + Testimonials */}
       <section className="py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="col-span-2 bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold mb-4">Upcoming Events</h3>
             <UpcomingEvents />
@@ -180,14 +326,14 @@ export default function Home() {
       </section>
 
       {/* CTA Footer */}
-      <section className="py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto bg-gradient-to-r from-purple-700 to-indigo-600 rounded-lg p-8 text-center text-white shadow-lg">
+      <section className="py-10 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto bg-gradient-to-r from-purple-700 to-indigo-600 rounded-lg p-6 sm:p-8 text-center text-white shadow-lg">
           <h4 className="text-2xl font-semibold">Ready to Share Your Work?</h4>
           <p className="mt-2 text-sm opacity-90">
             Create an account, join our channels and participate in weekly
             community highlights.
           </p>
-          <div className="mt-6 flex justify-center gap-4">
+          <div className="mt-6 flex flex-col sm:flex-row justify-center gap-4">
             <Link
               href="/register"
               className="px-5 py-2 bg-white text-purple-700 rounded-md font-medium"
