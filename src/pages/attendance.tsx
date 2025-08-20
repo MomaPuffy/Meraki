@@ -685,6 +685,7 @@ export default function Attendance() {
                       ref={videoRef}
                       autoPlay
                       playsInline
+                      muted // iOS Safari sometimes requires muted for autoplay
                       className="w-full rounded-lg"
                     />
                     <canvas ref={canvasRef} className="hidden" />
@@ -697,8 +698,8 @@ export default function Attendance() {
                       Capture Photo
                     </button>
 
-                    {/* Switch camera only shown if there's more than one device */}
-                    {videoDevices.length > 1 && (
+                    {/* ✅ Always show on iOS, or when multiple cameras exist */}
+                    {(videoDevices.length > 1 || isIOSSafari()) && (
                       <button
                         onClick={switchCamera}
                         className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white py-2 rounded-lg"
