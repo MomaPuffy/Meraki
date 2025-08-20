@@ -12,7 +12,7 @@ export default function Home() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-200 flex justify-center items-center px-4">
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 to-purple-300 flex justify-center items-center px-4">
         <div className="bg-white p-6 sm:p-8 rounded-lg shadow-lg max-w-sm w-full">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="text-center mt-4 text-gray-600 text-sm sm:text-base">
@@ -25,7 +25,7 @@ export default function Home() {
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-200 flex justify-center items-center px-4">
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 to-purple-300 flex justify-center items-center px-4">
         <div className="bg-white p-6 sm:p-8 rounded-lg shadow-lg text-center max-w-md w-full">
           <div className="mb-6">
             <Image
@@ -53,7 +53,7 @@ export default function Home() {
   const userColors = getUserColorTheme(session.user?.position);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-200 py-4 sm:py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-purple-300 py-4 sm:py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Welcome Header */}
         <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-6">

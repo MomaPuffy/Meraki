@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useAuth } from "@/hooks/useAuth";
+import { GoPerson } from "react-icons/go";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
@@ -29,8 +30,20 @@ export default function Navbar() {
         setShowMobileMenu(false);
       }
     }
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setShowMenu(false);
+        setShowMobileMenu(false);
+      }
+    }
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   useEffect(() => {
@@ -42,12 +55,12 @@ export default function Navbar() {
   return (
     <nav className="flex w-full h-15 bg-[#252525] sticky top-0 z-50">
       {/* Logo Section */}
-      <div className="flex items-center mx-2 space-x-2">
+      <Link href="/public" className="flex items-center mx-2 space-x-2">
         <Image src="/meraki.png" alt="Meraki logo" width={40} height={40} />
         <span className="text-xl sm:text-2xl leading-none text-white">
           Meraki
         </span>
-      </div>
+      </Link>
 
       {/* Desktop Navigation */}
       <div
@@ -111,43 +124,76 @@ export default function Navbar() {
           </li>
           <li>
             {status === "loading" ? null : session ? (
-              <>
+              <div className="relative">
                 <button
                   onClick={() => setShowMenu((prev) => !prev)}
-                  className="focus:outline-none"
+                  className="focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-[#252525] rounded-full transition-all duration-200"
+                  aria-expanded={showMenu}
+                  aria-haspopup="true"
+                  aria-label="User menu"
                 >
                   <Image
                     src={session.user?.image || "/meraki.png"}
-                    alt="Profile logo"
+                    alt="Profile"
                     width={40}
                     height={40}
-                    className="rounded-full cursor-pointer"
+                    className="rounded-full cursor-pointer border-2 border-transparent hover:border-gray-400 transition-all duration-200"
                   />
                 </button>
-                {showMenu && (
-                  <ul className="absolute -right-2 top-8 mt-5 w-auto bg-[#424242] z-10 rounded-sm shadow-lg">
-                    <li className="hover:bg-[#515151] hover:rounded-sm">
-                      <Link
-                        href="/profile"
-                        className="block w-full h-full px-4 py-2 text-white whitespace-nowrap"
-                      >
+                <div
+                  className={`absolute right-0 top-12 w-48 bg-white dark:bg-[#424242] rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 z-50 transition-all duration-200 transform ${
+                    showMenu
+                      ? "opacity-100 scale-100 translate-y-0"
+                      : "opacity-0 scale-95 -translate-y-2 pointer-events-none"
+                  }`}
+                  role="menu"
+                  aria-orientation="vertical"
+                  aria-labelledby="user-menu-button"
+                >
+                  <div className="py-1">
+                    <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-600">
+                      <p className="text-sm text-gray-700 dark:text-gray-200 font-medium truncate">
+                        {session.user?.name || session.user?.email}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                         {session.user?.email}
-                      </Link>
-                    </li>
-                    <li className="hover:bg-[#515151] hover:rounded-sm">
-                      <button
-                        className="block w-full h-full text-left px-4 py-2 text-white"
-                        onClick={() => {
-                          signOut();
-                          setShowMenu(false);
-                        }}
+                      </p>
+                    </div>
+                    <Link
+                      href="/profile"
+                      className="flex items-center w-full px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#515151] transition-colors duration-150"
+                      role="menuitem"
+                      onClick={() => setShowMenu(false)}
+                    >
+                      <GoPerson className="mr-3" />
+                      Profile
+                    </Link>
+                    <button
+                      className="flex items-center w-full px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-150"
+                      role="menuitem"
+                      onClick={() => {
+                        signOut();
+                        setShowMenu(false);
+                      }}
+                    >
+                      <svg
+                        className="w-4 h-4 mr-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
-                        Sign out
-                      </button>
-                    </li>
-                  </ul>
-                )}
-              </>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                        />
+                      </svg>
+                      Sign out
+                    </button>
+                  </div>
+                </div>
+              </div>
             ) : (
               <button
                 className="text-white bg-blue-600 px-4 py-2 rounded hover:bg-blue-700 transition-colors"
@@ -208,119 +254,148 @@ export default function Navbar() {
       </div>
 
       {/* Mobile Menu Overlay */}
-      {showMobileMenu && (
-        <div
-          ref={mobileMenuRef}
-          className="md:hidden absolute top-full left-0 w-full bg-[#252525] border-t border-gray-600 shadow-lg z-40"
-        >
-          <ul className="py-2 text-white">
+      <div
+        ref={mobileMenuRef}
+        className={`md:hidden absolute top-full left-0 w-full bg-[#252525] border-t border-gray-600 shadow-lg z-40 transition-all duration-200 ${
+          showMobileMenu
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 -translate-y-2 pointer-events-none"
+        }`}
+      >
+        <ul className="py-2 text-white">
+          <li>
+            <Link
+              href="/"
+              className="block px-4 py-3 hover:bg-[#424242] transition-colors"
+              onClick={() => setShowMobileMenu(false)}
+            >
+              Home
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/attendance"
+              className="block px-4 py-3 hover:bg-[#424242] transition-colors"
+              onClick={() => setShowMobileMenu(false)}
+            >
+              Attendance
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/chat"
+              className="block px-4 py-3 hover:bg-[#424242] transition-colors"
+              onClick={() => setShowMobileMenu(false)}
+            >
+              Chat
+            </Link>
+          </li>
+          {isAdmin && (
             <li>
               <Link
-                href="/"
+                href="/admin"
                 className="block px-4 py-3 hover:bg-[#424242] transition-colors"
                 onClick={() => setShowMobileMenu(false)}
               >
-                Home
+                Admin
               </Link>
             </li>
-            <li>
-              <Link
-                href="/attendance"
-                className="block px-4 py-3 hover:bg-[#424242] transition-colors"
-                onClick={() => setShowMobileMenu(false)}
-              >
-                Attendance
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/chat"
-                className="block px-4 py-3 hover:bg-[#424242] transition-colors"
-                onClick={() => setShowMobileMenu(false)}
-              >
-                Chat
-              </Link>
-            </li>
-            {isAdmin && (
+          )}
+          <li>
+            <Link
+              href="https://docs.google.com/spreadsheets/d/1BLdK3ry7XJymGRWiVIefZ1kdpxpWy-2XajthgD9ItPg"
+              className="block px-4 py-3 hover:bg-[#424242] transition-colors"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Directory
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="https://docs.google.com/spreadsheets/d/10AYkMS8_EohZqHXsZ3sA_qh-8iwRpfSeQTUfJa_XtMM"
+              className="block px-4 py-3 hover:bg-[#424242] transition-colors"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Task List
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="https://docs.google.com/spreadsheets/d/1JDq0LJWWzSISmtPTg3dt1KPX0LueThb7j1Pe95vUEDw"
+              className="block px-4 py-3 hover:bg-[#424242] transition-colors"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Department Tasks
+            </Link>
+          </li>
+          {session ? (
+            <>
               <li>
                 <Link
-                  href="/admin"
-                  className="block px-4 py-3 hover:bg-[#424242] transition-colors"
+                  href="/profile"
+                  className="flex items-center px-4 py-3 hover:bg-[#424242] transition-colors border-t border-gray-600"
                   onClick={() => setShowMobileMenu(false)}
                 >
-                  Admin
+                  <GoPerson className="mr-3" />
+                  Profile
                 </Link>
               </li>
-            )}
-            <li>
-              <Link
-                href="https://docs.google.com/spreadsheets/d/1BLdK3ry7XJymGRWiVIefZ1kdpxpWy-2XajthgD9ItPg"
-                className="block px-4 py-3 hover:bg-[#424242] transition-colors"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Directory
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="https://docs.google.com/spreadsheets/d/10AYkMS8_EohZqHXsZ3sA_qh-8iwRpfSeQTUfJa_XtMM"
-                className="block px-4 py-3 hover:bg-[#424242] transition-colors"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Task List
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="https://docs.google.com/spreadsheets/d/1JDq0LJWWzSISmtPTg3dt1KPX0LueThb7j1Pe95vUEDw"
-                className="block px-4 py-3 hover:bg-[#424242] transition-colors"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Department Tasks
-              </Link>
-            </li>
-            {session ? (
-              <>
-                <li>
-                  <Link
-                    href="/profile"
-                    className="block px-4 py-3 hover:bg-[#424242] transition-colors border-t border-gray-600"
-                    onClick={() => setShowMobileMenu(false)}
-                  >
-                    Profile
-                  </Link>
-                </li>
-                <li>
-                  <button
-                    className="block w-full text-left px-4 py-3 hover:bg-[#424242] transition-colors text-red-400"
-                    onClick={() => {
-                      signOut();
-                      setShowMobileMenu(false);
-                    }}
-                  >
-                    Sign out
-                  </button>
-                </li>
-              </>
-            ) : (
-              <li className="border-t border-gray-600">
+              <li>
                 <button
-                  className="block w-full text-left px-4 py-3 hover:bg-[#424242] transition-colors text-blue-400"
+                  className="flex items-center w-full text-left px-4 py-3 hover:bg-[#424242] transition-colors text-red-400"
                   onClick={() => {
-                    signIn();
+                    signOut();
                     setShowMobileMenu(false);
                   }}
                 >
-                  Sign in
+                  <svg
+                    className="w-4 h-4 mr-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                  Sign out
                 </button>
               </li>
-            )}
-          </ul>
-        </div>
-      )}
+            </>
+          ) : (
+            <li className="border-t border-gray-600">
+              <button
+                className="flex items-center w-full text-left px-4 py-3 hover:bg-[#424242] transition-colors text-blue-400"
+                onClick={() => {
+                  signIn();
+                  setShowMobileMenu(false);
+                }}
+              >
+                <svg
+                  className="w-4 h-4 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+                  />
+                </svg>
+                Sign in
+              </button>
+            </li>
+          )}
+        </ul>
+      </div>
     </nav>
   );
 }

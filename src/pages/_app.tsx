@@ -12,18 +12,23 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const isLoginPage = router.pathname === "/login";
 
+  const publicRoutes = ["/login", "/register", "/forgot-password", "/public"];
+  const isPublicRoute =
+    publicRoutes.includes(router.pathname) ||
+    router.pathname.startsWith("/public/");
+
   useEffect(() => {
     if (status === "loading") return;
-    if (!session && !isLoginPage) {
+    if (!session && !isPublicRoute) {
       router.replace("/login");
     }
     if (session && isLoginPage) {
       router.replace("/");
     }
-  }, [session, status, isLoginPage, router]);
+  }, [session, status, isPublicRoute, isLoginPage, router]);
 
   if (status === "loading") return null;
-  if (!session && !isLoginPage) return null;
+  if (!session && !isPublicRoute) return null;
   if (session && isLoginPage) return null;
   return <>{children}</>;
 }
