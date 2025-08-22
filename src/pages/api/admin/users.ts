@@ -19,27 +19,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const users = await db.collection("users").find({}).toArray();
 
     // Check attendance records for today to determine login status
+    // Sort newest-first so the first record we encounter per user is the latest
     const attendanceRecords = await db
       .collection("attendance")
-      .find({
-        date: todayPHT,
-      })
+      .find({ date: todayPHT })
+      .sort({ createdAt: -1 })
       .toArray();
 
-    // Create a map of user emails who logged in today with their attendance data
+    // Create a map of user emails to the latest attendance record for today
     const todayAttendanceMap = new Map();
     attendanceRecords.forEach((record) => {
+      // Because records are sorted newest-first, only set if we haven't seen this user yet
       if (!todayAttendanceMap.has(record.userEmail)) {
         todayAttendanceMap.set(record.userEmail, {
           timeIn: record.timeIn,
           timeOut: record.timeOut || null,
         });
-      } else {
-        // Update with latest time out if exists
-        const existing = todayAttendanceMap.get(record.userEmail);
-        if (record.timeOut) {
-          existing.timeOut = record.timeOut;
-        }
       }
     });
 

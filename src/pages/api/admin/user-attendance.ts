@@ -37,7 +37,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const attendanceRecords = await db
       .collection("attendance")
       .find({ userId: userId })
-      .sort({ date: -1 })
+      .sort({ createdAt: -1, date: -1 })
       .limit(100)
       .toArray();
 

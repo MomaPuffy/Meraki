@@ -67,7 +67,17 @@ export default function Attendance() {
       const response = await fetch("/api/attendance");
       if (response.ok) {
         const data = await response.json();
-        setAttendanceRecords(data.records);
+        // Defensive: ensure records are sorted newest-first by createdAt
+        const records: AttendanceRecord[] = Array.isArray(data.records)
+          ? (data.records as AttendanceRecord[])
+              .slice()
+              .sort((a: AttendanceRecord, b: AttendanceRecord) => {
+                const ta = a.createdAt || a.date || "";
+                const tb = b.createdAt || b.date || "";
+                return tb.localeCompare(ta);
+              })
+          : [];
+        setAttendanceRecords(records);
       } else {
         setMessage("Failed to fetch attendance records");
       }
@@ -178,8 +188,15 @@ export default function Attendance() {
   const getTodayRecords = () => {
     const today = getPHTDateString(); // Use PHT date for comparison
     if (!Array.isArray(attendanceRecords)) return [];
-    // Keep original sort order from API (date desc) but filter for today's date
-    return attendanceRecords.filter((record) => record.date === today);
+    // Filter for today's date and ensure newest-first order by createdAt
+    return attendanceRecords
+      .filter((record) => record.date === today)
+      .slice()
+      .sort((a, b) => {
+        const ta = a.createdAt || a.date || "";
+        const tb = b.createdAt || b.date || "";
+        return tb.localeCompare(ta);
+      });
   };
 
   const todayRecords = getTodayRecords();

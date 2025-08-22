@@ -35,10 +35,12 @@ async function handler(
       const client = await clientPromise;
       const db = client.db("meraki");
 
+      // Sort by newest entries first (createdAt descending) so the very latest
+      // attendance document appears at the top. Fall back to date if needed.
       const attendanceRecords = await db
         .collection("attendance")
         .find({ userId: session.user.id })
-        .sort({ date: -1 })
+        .sort({ createdAt: -1, date: -1 })
         .limit(50)
         .toArray();
 

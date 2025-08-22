@@ -120,6 +120,16 @@ export default function Admin() {
       const data = await response.json();
 
       if (response.ok) {
+        // Defensive: ensure attendance entries are sorted newest-first by createdAt
+        if (data && Array.isArray(data.attendance)) {
+          data.attendance = (data.attendance as AttendanceRecord[])
+            .slice()
+            .sort((a, b) => {
+              const ta = a.createdAt || a.date || "";
+              const tb = b.createdAt || b.date || "";
+              return tb.localeCompare(ta);
+            });
+        }
         setSelectedUser(data);
       } else {
         setError(data.message || "Failed to fetch user attendance");
@@ -655,7 +665,7 @@ export default function Admin() {
 
   return (
     <>
-  <div className="min-h-screen py-4 sm:py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen py-4 sm:py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             {/* Header Section */}
