@@ -83,46 +83,114 @@ export default function Attendance() {
     );
   };
 
+  const isAndroid = () => {
+    return (
+      typeof navigator !== "undefined" && /Android/.test(navigator.userAgent)
+    );
+  };
+
+  const checkCameraSupport = async () => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        return {
+          supported: false,
+          error: "Camera API not supported in this browser",
+        };
+      }
+
+      // Check if we can enumerate devices (some browsers restrict this)
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoInputs = devices.filter((d) => d.kind === "videoinput");
+
+      return {
+        supported: true,
+        deviceCount: videoInputs.length,
+        hasMultipleCameras: videoInputs.length > 1,
+      };
+    } catch (error) {
+      return {
+        supported: true, // Might still work even if enumeration fails
+        error: "Device enumeration failed",
+        deviceCount: 0,
+      };
+    }
+  };
+
   const startCamera = async (type: "time-in" | "time-out") => {
     setActionType(type);
     setShowCamera(true);
+    setMessage(""); // Clear any previous messages
 
     try {
-      // Enumerate available video input devices and remember them so the user
-      // can switch between cameras.
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoInputs = devices.filter((d) => d.kind === "videoinput");
-      setVideoDevices(videoInputs);
-
-      // Choose a deviceId to use: prefer previously selected, otherwise first
-      // available. If none available, fall back to generic video constraint.
-      let constraints: MediaStreamConstraints;
-
-      if (isIOSSafari()) {
-        constraints = { video: { facingMode: "environment" } };
-        setSelectedDeviceId("environment");
-      } else if (videoInputs.length > 0) {
-        const deviceIdToUse = selectedDeviceId || videoInputs[0].deviceId;
-        setSelectedDeviceId(deviceIdToUse);
-        constraints = { video: { deviceId: { exact: deviceIdToUse } } };
-      } else {
-        constraints = { video: true };
-      }
-
       // Stop any existing stream before starting a new one.
       if (videoRef.current) {
         const existing = videoRef.current.srcObject as MediaStream | null;
         existing?.getTracks().forEach((t) => t.stop());
       }
 
+      // Start with basic constraints first to get permission
+      let constraints: MediaStreamConstraints;
+
+      if (isIOSSafari()) {
+        constraints = { video: { facingMode: "environment" } };
+        setSelectedDeviceId("environment");
+      } else {
+        // Use more flexible constraints for Android devices
+        constraints = {
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: "environment", // Prefer back camera
+          },
+        };
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
+
+      // After getting the stream, enumerate devices for camera switching
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices.filter((d) => d.kind === "videoinput");
+        setVideoDevices(videoInputs);
+
+        // Set the selected device if we got specific device info
+        if (!isIOSSafari() && videoInputs.length > 0) {
+          const activeTrack = stream.getVideoTracks()[0];
+          const settings = activeTrack.getSettings();
+          if (settings.deviceId) {
+            setSelectedDeviceId(settings.deviceId);
+          } else if (videoInputs.length > 0) {
+            setSelectedDeviceId(videoInputs[0].deviceId);
+          }
+        }
+      } catch (enumerateError) {
+        console.warn("Could not enumerate devices:", enumerateError);
+        // Continue anyway, camera switching just won't be available
+      }
     } catch (error) {
       console.error("Camera access error:", error);
-      setMessage("Camera access denied");
+      let errorMessage = "Camera access denied or not available";
+
+      // Provide more specific error messages
+      if (error instanceof Error) {
+        if (error.name === "NotAllowedError") {
+          errorMessage =
+            "Camera permission denied. Please allow camera access and try again.";
+        } else if (error.name === "NotFoundError") {
+          errorMessage = "No camera found on this device.";
+        } else if (error.name === "NotReadableError") {
+          errorMessage = "Camera is being used by another application.";
+        } else if (error.name === "OverconstrainedError") {
+          errorMessage = "Camera settings not supported by this device.";
+        }
+      }
+
+      setMessage(errorMessage);
       setShowCamera(false);
+      setActionType(null);
     }
   };
 
@@ -130,14 +198,99 @@ export default function Attendance() {
   // with front/back cameras). This restarts the stream with the next device.
   const switchCamera = async () => {
     try {
-      if (!navigator.mediaDevices) return;
+      if (!navigator.mediaDevices) {
+        setMessage("Camera switching not supported on this browser.");
+        return;
+      }
+
+      // Clear any previous error messages
+      setMessage("");
 
       if (isIOSSafari()) {
         const newFacingMode =
           selectedDeviceId === "user" ? "environment" : "user";
 
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: newFacingMode },
+          });
+
+          if (videoRef.current) {
+            const existing = videoRef.current.srcObject as MediaStream | null;
+            existing?.getTracks().forEach((t) => t.stop());
+
+            videoRef.current.srcObject = stream;
+          }
+
+          setSelectedDeviceId(newFacingMode);
+        } catch (facingModeError) {
+          // Fallback to basic video constraint
+          console.warn(
+            "FacingMode constraint failed, trying fallback:",
+            facingModeError
+          );
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+          });
+
+          if (videoRef.current) {
+            const existing = videoRef.current.srcObject as MediaStream | null;
+            existing?.getTracks().forEach((t) => t.stop());
+
+            videoRef.current.srcObject = stream;
+          }
+        }
+        return;
+      }
+
+      // For non-iOS devices
+      if (videoDevices.length < 2) {
+        // Try to switch using facingMode if device enumeration doesn't show multiple cameras
+        const currentStream = videoRef.current?.srcObject as MediaStream | null;
+        const currentTrack = currentStream?.getVideoTracks()[0];
+        const currentSettings = currentTrack?.getSettings();
+
+        const newFacingMode =
+          currentSettings?.facingMode === "user" ? "environment" : "user";
+
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: newFacingMode,
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+          });
+
+          if (videoRef.current) {
+            const existing = videoRef.current.srcObject as MediaStream | null;
+            existing?.getTracks().forEach((t) => t.stop());
+
+            videoRef.current.srcObject = stream;
+          }
+        } catch (facingModeError) {
+          setMessage(
+            "No other camera found or camera switching not supported."
+          );
+          return;
+        }
+        return;
+      }
+
+      const currentIndex = videoDevices.findIndex(
+        (d) => d.deviceId === selectedDeviceId
+      );
+
+      const nextIndex = (currentIndex + 1) % videoDevices.length;
+      const nextDevice = videoDevices[nextIndex];
+
+      try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { exact: newFacingMode } },
+          video: {
+            deviceId: { ideal: nextDevice.deviceId },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
         });
 
         if (videoRef.current) {
@@ -147,35 +300,35 @@ export default function Attendance() {
           videoRef.current.srcObject = stream;
         }
 
-        setSelectedDeviceId(newFacingMode);
-        return;
+        setSelectedDeviceId(nextDevice.deviceId);
+      } catch (deviceError) {
+        // Fallback to next device with less strict constraints
+        console.warn(
+          "Strict device constraint failed, trying fallback:",
+          deviceError
+        );
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { deviceId: nextDevice.deviceId },
+          });
+
+          if (videoRef.current) {
+            const existing = videoRef.current.srcObject as MediaStream | null;
+            existing?.getTracks().forEach((t) => t.stop());
+
+            videoRef.current.srcObject = stream;
+          }
+
+          setSelectedDeviceId(nextDevice.deviceId);
+        } catch (fallbackError) {
+          setMessage("Unable to switch to the next camera. Please try again.");
+        }
       }
-
-      if (videoDevices.length < 2) return;
-
-      const currentIndex = videoDevices.findIndex(
-        (d) => d.deviceId === selectedDeviceId
-      );
-
-      const nextIndex = (currentIndex + 1) % videoDevices.length;
-      const nextDevice = videoDevices[nextIndex];
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: { exact: nextDevice.deviceId } },
-      });
-
-      if (videoRef.current) {
-        const existing = videoRef.current.srcObject as MediaStream | null;
-        existing?.getTracks().forEach((t) => t.stop());
-
-        videoRef.current.srcObject = stream;
-      }
-
-      setSelectedDeviceId(nextDevice.deviceId);
     } catch (err) {
       console.error("Switch camera error:", err);
-      // If switching fails, do not close the modal; inform the user.
-      setMessage("Unable to switch camera on this device/browser.");
+      setMessage(
+        "Camera switching failed. Please close and reopen the camera."
+      );
     }
   };
 
@@ -541,7 +694,14 @@ export default function Attendance() {
               </h2>
               <div className="flex flex-wrap gap-4">
                 <button
-                  onClick={() => startCamera("time-in")}
+                  onClick={async () => {
+                    const cameraCheck = await checkCameraSupport();
+                    if (!cameraCheck.supported) {
+                      setMessage(cameraCheck.error || "Camera not supported");
+                      return;
+                    }
+                    startCamera("time-in");
+                  }}
                   disabled={actionLoading || !!todayRecord?.timeIn}
                   className={`px-6 py-3 rounded-lg font-medium transition-colors ${
                     todayRecord?.timeIn
@@ -555,7 +715,14 @@ export default function Attendance() {
                 </button>
 
                 <button
-                  onClick={() => startCamera("time-out")}
+                  onClick={async () => {
+                    const cameraCheck = await checkCameraSupport();
+                    if (!cameraCheck.supported) {
+                      setMessage(cameraCheck.error || "Camera not supported");
+                      return;
+                    }
+                    startCamera("time-out");
+                  }}
                   disabled={
                     actionLoading ||
                     !todayRecord?.timeIn ||
@@ -698,8 +865,10 @@ export default function Attendance() {
                       Capture Photo
                     </button>
 
-                    {/* ✅ Always show on iOS, or when multiple cameras exist */}
-                    {(isIOSSafari() || videoDevices.length > 1) && (
+                    {/* Show switch camera button for iOS, Android, or when multiple cameras exist */}
+                    {(isIOSSafari() ||
+                      isAndroid() ||
+                      videoDevices.length > 1) && (
                       <button
                         onClick={switchCamera}
                         className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white py-2 rounded-lg"
