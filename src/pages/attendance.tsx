@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Navbar from "@/app/components/navbar/Navbar";
@@ -10,6 +10,14 @@ import {
   getPHTDateString,
 } from "@/utils/dateUtils";
 import DataTable, { Column } from "@/components/DataTable";
+import * as Camera from "@capacitor/camera";
+
+// Minimal runtime shape for the Capacitor Camera photo result we use.
+type CapacitorPhoto = {
+  dataUrl?: string;
+  base64String?: string;
+  webPath?: string;
+};
 
 export default function Attendance() {
   const { data: session, status } = useSession();
@@ -21,14 +29,10 @@ export default function Attendance() {
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [showCamera, setShowCamera] = useState(false);
   const [actionType, setActionType] = useState<"time-in" | "time-out" | null>(
     null
   );
-  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
-  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Using Capacitor Camera plugin via dynamic import (client-only). No live preview.
 
   useEffect(() => {
     const fetchData = async () => {
@@ -75,298 +79,59 @@ export default function Attendance() {
     }
   };
 
-  const isIOSSafari = () => {
-    return (
-      typeof navigator !== "undefined" &&
-      /iPad|iPhone|iPod/.test(navigator.userAgent) &&
-      !("MSStream" in window)
-    );
-  };
-
-  const isAndroid = () => {
-    return (
-      typeof navigator !== "undefined" && /Android/.test(navigator.userAgent)
-    );
-  };
-
   const checkCameraSupport = async () => {
-    try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        return {
-          supported: false,
-          error: "Camera API not supported in this browser",
-        };
-      }
-
-      // Check if we can enumerate devices (some browsers restrict this)
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoInputs = devices.filter((d) => d.kind === "videoinput");
-
-      return {
-        supported: true,
-        deviceCount: videoInputs.length,
-        hasMultipleCameras: videoInputs.length > 1,
-      };
-    } catch (error) {
-      return {
-        supported: true, // Might still work even if enumeration fails
-        error: `Device enumeration failed, ${error}`,
-        deviceCount: 0,
-      };
+    // Lightweight client-only check. We assume static import is used for Capacitor.
+    if (typeof window === "undefined") {
+      return { supported: false, error: "Camera not available on server" };
     }
+
+    // If running in a browser environment, assume Camera plugin is available when installed in native builds.
+    return { supported: true };
   };
 
   const startCamera = async (type: "time-in" | "time-out") => {
     setActionType(type);
-    setShowCamera(true);
-    setMessage(""); // Clear any previous messages
+    setMessage("");
 
     try {
-      // Stop any existing stream before starting a new one.
-      if (videoRef.current) {
-        const existing = videoRef.current.srcObject as MediaStream | null;
-        existing?.getTracks().forEach((t) => t.stop());
-      }
+      // Use the statically imported Capacitor Camera module.
+      const photoRaw = await Camera.Camera.getPhoto({
+        quality: 80,
+        resultType: Camera.CameraResultType.DataUrl,
+        source: Camera.CameraSource.Camera,
+        width: 1280,
+        allowEditing: false,
+      });
 
-      // Start with basic constraints first to get permission
-      let constraints: MediaStreamConstraints;
+      const photo = photoRaw as unknown as CapacitorPhoto;
 
-      if (isIOSSafari()) {
-        constraints = { video: { facingMode: "environment" } };
-        setSelectedDeviceId("environment");
-      } else {
-        // Use more flexible constraints for Android devices
-        constraints = {
-          video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            facingMode: "environment", // Prefer back camera
-          },
-        };
-      }
+      // Normalize to data URL (prefer dataUrl, then base64, then webPath)
+      const dataUrl =
+        photo.dataUrl ||
+        (photo.base64String
+          ? `data:image/jpeg;base64,${photo.base64String}`
+          : photo.webPath);
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-
-      // After getting the stream, enumerate devices for camera switching
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoInputs = devices.filter((d) => d.kind === "videoinput");
-        setVideoDevices(videoInputs);
-
-        // Set the selected device if we got specific device info
-        if (!isIOSSafari() && videoInputs.length > 0) {
-          const activeTrack = stream.getVideoTracks()[0];
-          const settings = activeTrack.getSettings();
-          if (settings.deviceId) {
-            setSelectedDeviceId(settings.deviceId);
-          } else if (videoInputs.length > 0) {
-            setSelectedDeviceId(videoInputs[0].deviceId);
-          }
-        }
-      } catch (enumerateError) {
-        console.warn("Could not enumerate devices:", enumerateError);
-        // Continue anyway, camera switching just won't be available
-      }
-    } catch (error) {
-      // Final Fallback
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-        });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-        return;
-      } catch (error) {
-        console.log("Error starting camera:", error);
-        setMessage("Camera access denied or not available");
-        setShowCamera(false);
-      }
-      console.error("Camera access error:", error);
-      let errorMessage = "Camera access denied or not available";
-
-      // Provide more specific error messages
-      if (error instanceof Error) {
-        if (error.name === "NotAllowedError") {
-          errorMessage =
-            "Camera permission denied. Please allow camera access and try again.";
-        } else if (error.name === "NotFoundError") {
-          errorMessage = "No camera found on this device.";
-        } else if (error.name === "NotReadableError") {
-          errorMessage = "Camera is being used by another application.";
-        } else if (error.name === "OverconstrainedError") {
-          errorMessage = "Camera settings not supported by this device.";
-        }
-      }
-
-      setMessage(errorMessage);
-      setShowCamera(false);
-      setActionType(null);
-    }
-  };
-
-  // Cycle through available video input devices (useful on mobile / laptops
-  // with front/back cameras). This restarts the stream with the next device.
-  const switchCamera = async () => {
-    try {
-      if (!navigator.mediaDevices) {
-        setMessage("Camera switching not supported on this browser.");
+      if (!dataUrl) {
+        setMessage("Failed to capture image.");
+        setActionType(null);
         return;
       }
 
-      // Clear any previous error messages
-      setMessage("");
-
-      if (isIOSSafari()) {
-        const newFacingMode =
-          selectedDeviceId === "user" ? "environment" : "user";
-
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: newFacingMode },
-          });
-
-          if (videoRef.current) {
-            const existing = videoRef.current.srcObject as MediaStream | null;
-            existing?.getTracks().forEach((t) => t.stop());
-
-            videoRef.current.srcObject = stream;
-          }
-
-          setSelectedDeviceId(newFacingMode);
-        } catch (facingModeError) {
-          // Fallback to basic video constraint
-          console.warn(
-            "FacingMode constraint failed, trying fallback:",
-            facingModeError
-          );
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-          });
-
-          if (videoRef.current) {
-            const existing = videoRef.current.srcObject as MediaStream | null;
-            existing?.getTracks().forEach((t) => t.stop());
-
-            videoRef.current.srcObject = stream;
-          }
-        }
-        return;
-      }
-
-      // For non-iOS devices
-      if (videoDevices.length < 2) {
-        // Try to switch using facingMode if device enumeration doesn't show multiple cameras
-        const currentStream = videoRef.current?.srcObject as MediaStream | null;
-        const currentTrack = currentStream?.getVideoTracks()[0];
-        const currentSettings = currentTrack?.getSettings();
-
-        const newFacingMode =
-          currentSettings?.facingMode === "user" ? "environment" : "user";
-
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: newFacingMode,
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-            },
-          });
-
-          if (videoRef.current) {
-            const existing = videoRef.current.srcObject as MediaStream | null;
-            existing?.getTracks().forEach((t) => t.stop());
-
-            videoRef.current.srcObject = stream;
-          }
-        } catch (facingModeError) {
-          console.log(facingModeError);
-          setMessage(
-            "No other camera found or camera switching not supported."
-          );
-          return;
-        }
-        return;
-      }
-
-      const currentIndex = videoDevices.findIndex(
-        (d) => d.deviceId === selectedDeviceId
-      );
-
-      const nextIndex = (currentIndex + 1) % videoDevices.length;
-      const nextDevice = videoDevices[nextIndex];
-
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            deviceId: { ideal: nextDevice.deviceId },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-        });
-
-        if (videoRef.current) {
-          const existing = videoRef.current.srcObject as MediaStream | null;
-          existing?.getTracks().forEach((t) => t.stop());
-
-          videoRef.current.srcObject = stream;
-        }
-
-        setSelectedDeviceId(nextDevice.deviceId);
-      } catch (deviceError) {
-        // Fallback to next device with less strict constraints
-        console.warn(
-          "Strict device constraint failed, trying fallback:",
-          deviceError
-        );
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: { deviceId: nextDevice.deviceId },
-          });
-
-          if (videoRef.current) {
-            const existing = videoRef.current.srcObject as MediaStream | null;
-            existing?.getTracks().forEach((t) => t.stop());
-
-            videoRef.current.srcObject = stream;
-          }
-
-          setSelectedDeviceId(nextDevice.deviceId);
-        } catch (fallbackError) {
-          console.log(fallbackError);
-          setMessage("Unable to switch to the next camera. Please try again.");
-        }
-      }
+      // Submit attendance (submitAttendance manages actionLoading)
+      await submitAttendance(type, dataUrl as string);
     } catch (err) {
-      console.error("Switch camera error:", err);
-      setMessage(
-        "Camera switching failed. Please close and reopen the camera."
-      );
-    }
-  };
-
-  const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current && actionType) {
-      const canvas = canvasRef.current;
-      const video = videoRef.current;
-      const context = canvas.getContext("2d");
-
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context?.drawImage(video, 0, 0);
-
-      const imageData = canvas.toDataURL("image/jpeg", 0.8);
-
-      // Stop camera
-      const stream = video.srcObject as MediaStream;
-      stream?.getTracks().forEach((track) => track.stop());
-      setShowCamera(false);
-
-      // Submit attendance
-      submitAttendance(actionType, imageData);
+      console.error("Capacitor Camera error:", err);
+      let errorMessage = "Camera capture failed or was cancelled.";
+      if (err instanceof Error) {
+        if (err.name === "NotAllowedError") {
+          errorMessage =
+            "Camera permission denied. Please allow camera access.";
+        }
+      }
+      setMessage(errorMessage);
+    } finally {
+      setActionType(null);
     }
   };
 
@@ -399,15 +164,6 @@ export default function Attendance() {
       setActionLoading(false);
       setActionType(null);
     }
-  };
-
-  const cancelCamera = () => {
-    if (videoRef.current) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream?.getTracks().forEach((track) => track.stop());
-    }
-    setShowCamera(false);
-    setActionType(null);
   };
 
   const formatTime = (dateString: string) => {
@@ -855,55 +611,9 @@ export default function Attendance() {
               )}
             </div>
 
-            {/* Camera Modal */}
-            {showCamera && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-                  <h3 className="text-lg font-semibold mb-4">
-                    Take Photo for{" "}
-                    {actionType === "time-in" ? "Time In" : "Time Out"}
-                  </h3>
-                  <div className="relative">
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted // iOS Safari sometimes requires muted for autoplay
-                      className="w-full rounded-lg"
-                    />
-                    <canvas ref={canvasRef} className="hidden" />
-                  </div>
-                  <div className="flex gap-4 mt-4">
-                    <button
-                      onClick={capturePhoto}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg"
-                    >
-                      Capture Photo
-                    </button>
-
-                    {/* Show switch camera button for iOS, Android, or when multiple cameras exist */}
-                    {(isIOSSafari() ||
-                      isAndroid() ||
-                      videoDevices.length > 1) && (
-                      <button
-                        onClick={switchCamera}
-                        className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white py-2 rounded-lg"
-                        title={selectedDeviceId || undefined}
-                      >
-                        Switch Camera
-                      </button>
-                    )}
-
-                    <button
-                      onClick={cancelCamera}
-                      className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Camera capture is handled via Capacitor Camera (single-shot).
+        No in-page live preview is used when running with Capacitor.
+      */}
 
             {/* Attendance Records DataTable */}
             <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">

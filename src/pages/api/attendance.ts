@@ -16,6 +16,15 @@ import {
   serverError,
 } from "@/utils/apiResponse";
 
+// Allow larger request bodies (base64 image uploads). Adjust as needed.
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "10mb",
+    },
+  },
+};
+
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
