@@ -171,6 +171,20 @@ export default function Attendance() {
         // Continue anyway, camera switching just won't be available
       }
     } catch (error) {
+      // Final Fallback
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+        });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+        return;
+      } catch (error) {
+        console.log("Error starting camera:", error);
+        setMessage("Camera access denied or not available");
+        setShowCamera(false);
+      }
       console.error("Camera access error:", error);
       let errorMessage = "Camera access denied or not available";
 
