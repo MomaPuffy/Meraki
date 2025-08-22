@@ -110,7 +110,7 @@ export default function Attendance() {
     } catch (error) {
       return {
         supported: true, // Might still work even if enumeration fails
-        error: "Device enumeration failed",
+        error: `Device enumeration failed, ${error}`,
         deviceCount: 0,
       };
     }
@@ -269,6 +269,7 @@ export default function Attendance() {
             videoRef.current.srcObject = stream;
           }
         } catch (facingModeError) {
+          console.log(facingModeError);
           setMessage(
             "No other camera found or camera switching not supported."
           );
@@ -321,6 +322,7 @@ export default function Attendance() {
 
           setSelectedDeviceId(nextDevice.deviceId);
         } catch (fallbackError) {
+          console.log(fallbackError);
           setMessage("Unable to switch to the next camera. Please try again.");
         }
       }
