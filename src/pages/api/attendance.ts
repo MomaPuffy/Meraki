@@ -94,16 +94,9 @@ async function handler(
       }
 
       if (type === "time-in") {
-        const existingRecord = await db.collection("attendance").findOne({
-          userId: session.user.id,
-          date: today,
-          timeIn: { $exists: true },
-        });
-
-        if (existingRecord) {
-          return badRequest(res, "Already timed in for today");
-        }
-
+        // Allow multiple time-in records per day. Each time-in creates a new
+        // attendance document. Time-out will target the most recent record
+        // without a timeOut.
         const newRecord = {
           userId: session.user.id,
           userName: session.user.name,
@@ -111,7 +104,7 @@ async function handler(
           date: today,
           timeIn: currentPHTTimeString,
           timeInImage: imageData,
-          createdAt: currentPHTTimeString,
+          createdAt: new Date().toISOString(),
         };
 
         await db.collection("attendance").insertOne(newRecord);

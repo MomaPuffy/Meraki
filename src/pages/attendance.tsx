@@ -174,16 +174,17 @@ export default function Attendance() {
     return formatDateForDisplay(dateString, false); // Explicitly use PHT
   };
 
-  const getTodayRecord = () => {
+  // Return today's records (could be multiple) and the latest open record (timeIn without timeOut)
+  const getTodayRecords = () => {
     const today = getPHTDateString(); // Use PHT date for comparison
-    // Add defensive check to ensure attendanceRecords is an array
-    if (!Array.isArray(attendanceRecords)) {
-      return undefined;
-    }
-    return attendanceRecords.find((record) => record.date === today);
+    if (!Array.isArray(attendanceRecords)) return [];
+    // Keep original sort order from API (date desc) but filter for today's date
+    return attendanceRecords.filter((record) => record.date === today);
   };
 
-  const todayRecord = getTodayRecord();
+  const todayRecords = getTodayRecords();
+  // Find the most recent record for today that has a timeIn but no timeOut
+  const openRecord = todayRecords.find((r) => r.timeIn && !r.timeOut);
 
   if (status === "loading" || loading) {
     return (
@@ -474,9 +475,10 @@ export default function Attendance() {
                     }
                     startCamera("time-in");
                   }}
-                  disabled={actionLoading || !!todayRecord?.timeIn}
+                  // Disable Time In when there's an open (untimed-out) record
+                  disabled={actionLoading || !!openRecord}
                   className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-                    todayRecord?.timeIn
+                    openRecord
                       ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                       : "bg-green-600 hover:bg-green-700 text-white"
                   }`}
@@ -495,13 +497,10 @@ export default function Attendance() {
                     }
                     startCamera("time-out");
                   }}
-                  disabled={
-                    actionLoading ||
-                    !todayRecord?.timeIn ||
-                    !!todayRecord?.timeOut
-                  }
+                  // Enable Time Out only when there's an open (untimed-out) record
+                  disabled={actionLoading || !openRecord}
                   className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-                    !todayRecord?.timeIn || todayRecord?.timeOut
+                    !openRecord
                       ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                       : "bg-red-600 hover:bg-red-700 text-white"
                   }`}
@@ -512,101 +511,87 @@ export default function Attendance() {
                 </button>
               </div>
 
-              {todayRecord && (
+              {todayRecords.length > 0 && (
                 <div className="mt-6 p-4 bg-white rounded-lg border border-gray-200">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-sm text-gray-700 font-medium">
-                      Today&apos;s Status
+                      Today&apos;s Entries ({todayRecords.length})
                     </p>
                     <span
                       className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        todayRecord.timeOut
-                          ? "bg-green-100 text-green-800"
-                          : todayRecord.timeIn
+                        openRecord
                           ? "bg-yellow-100 text-yellow-800"
-                          : "bg-gray-100 text-gray-800"
+                          : "bg-green-100 text-green-800"
                       }`}
                     >
-                      {todayRecord.timeOut
-                        ? "Complete"
-                        : todayRecord.timeIn
-                        ? "In Progress"
-                        : "Incomplete"}
+                      {openRecord ? "Open Entry" : "All Complete"}
                     </span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wider">
-                        Time In
-                      </p>
-                      <p className="text-sm font-medium text-gray-900">
-                        {todayRecord.timeIn
-                          ? formatTime(todayRecord.timeIn)
-                          : "-"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wider">
-                        Time Out
-                      </p>
-                      <p className="text-sm font-medium text-gray-900">
-                        {todayRecord.timeOut
-                          ? formatTime(todayRecord.timeOut)
-                          : "-"}
-                      </p>
-                    </div>
-                  </div>
-                  {(todayRecord.timeInImage || todayRecord.timeOutImage) && (
-                    <div className="mt-4">
-                      <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">
-                        Photos
-                      </p>
-                      <div className="flex gap-3">
-                        {todayRecord.timeInImage && (
-                          <div className="text-center">
-                            <Image
-                              src={todayRecord.timeInImage.thumbnail}
-                              alt="Time In Photo"
-                              width={64}
-                              height={64}
-                              className="rounded-lg object-cover border-2 border-green-200 cursor-pointer hover:border-green-300 transition-colors"
-                              onClick={() =>
-                                window.open(
-                                  todayRecord.timeInImage!.url,
-                                  "_blank"
-                                )
-                              }
-                              title="Click to view Time In photo"
-                            />
-                            <p className="text-xs text-green-600 mt-1">
-                              Time In
-                            </p>
+
+                  <div className="space-y-3">
+                    {todayRecords.map((rec) => (
+                      <div
+                        key={rec.id || `${rec.date}-${rec.timeIn}`}
+                        className="p-3 bg-gray-50 rounded-md border border-gray-100"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="text-sm text-gray-900 font-medium">
+                            {rec.timeIn ? formatTime(rec.timeIn) : "-"}
+                            {rec.timeOut && (
+                              <span className="ml-2 text-xs text-gray-500">
+                                → {formatTime(rec.timeOut)}
+                              </span>
+                            )}
                           </div>
-                        )}
-                        {todayRecord.timeOutImage && (
-                          <div className="text-center">
-                            <Image
-                              src={todayRecord.timeOutImage.thumbnail}
-                              alt="Time Out Photo"
-                              width={64}
-                              height={64}
-                              className="rounded-lg object-cover border-2 border-red-200 cursor-pointer hover:border-red-300 transition-colors"
-                              onClick={() =>
-                                window.open(
-                                  todayRecord.timeOutImage!.url,
-                                  "_blank"
-                                )
-                              }
-                              title="Click to view Time Out photo"
-                            />
-                            <p className="text-xs text-red-600 mt-1">
-                              Time Out
-                            </p>
+                          <div className="text-xs text-gray-500">
+                            {rec.timeOut
+                              ? "Complete"
+                              : rec.timeIn
+                              ? "In Progress"
+                              : "Incomplete"}
+                          </div>
+                        </div>
+                        {(rec.timeInImage || rec.timeOutImage) && (
+                          <div className="flex gap-3">
+                            {rec.timeInImage && (
+                              <div className="text-center">
+                                <Image
+                                  src={rec.timeInImage.thumbnail}
+                                  alt="Time In Photo"
+                                  width={48}
+                                  height={48}
+                                  className="rounded-lg object-cover border-2 border-green-200 cursor-pointer"
+                                  onClick={() =>
+                                    window.open(rec.timeInImage!.url, "_blank")
+                                  }
+                                />
+                                <div className="text-xs text-green-600 mt-1">
+                                  In
+                                </div>
+                              </div>
+                            )}
+                            {rec.timeOutImage && (
+                              <div className="text-center">
+                                <Image
+                                  src={rec.timeOutImage.thumbnail}
+                                  alt="Time Out Photo"
+                                  width={48}
+                                  height={48}
+                                  className="rounded-lg object-cover border-2 border-red-200 cursor-pointer"
+                                  onClick={() =>
+                                    window.open(rec.timeOutImage!.url, "_blank")
+                                  }
+                                />
+                                <div className="text-xs text-red-600 mt-1">
+                                  Out
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
