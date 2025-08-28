@@ -4,6 +4,14 @@ import clientPromise from "@/lib/mongodb";
 import { authOptions } from "./auth/[...nextauth]";
 import { isAdminPosition } from "@/utils/adminRoles";
 import { uploadImage } from "@/lib/cloudinary";
+import {
+  ok,
+  created,
+  badRequest,
+  forbidden,
+  methodNotAllowed,
+  serverError,
+} from "@/utils/apiResponse";
 
 // allow larger JSON bodies for base64 image uploads
 export const config = {
@@ -28,13 +36,13 @@ export default async function handler(
         .find()
         .sort({ createdAt: -1 })
         .toArray();
-      return res.status(200).json({ items });
+      return ok(res, { items });
     }
 
     if (req.method === "POST") {
       const session = await getServerSession(req, res, authOptions);
       if (!session || !isAdminPosition(session.user?.position)) {
-        return res.status(403).json({ message: "Forbidden" });
+        return forbidden(res);
       }
 
       const { title, category, src, imageBase64 } = req.body as {
@@ -45,7 +53,7 @@ export default async function handler(
       };
 
       if (!title || !category || (!src && !imageBase64)) {
-        return res.status(400).json({ message: "Missing fields" });
+        return badRequest(res, "Missing fields");
       }
 
       let finalSrc = src;
@@ -59,7 +67,7 @@ export default async function handler(
           public_id = uploaded.public_id;
         } catch (err) {
           console.error("Cloudinary upload failed", err);
-          return res.status(500).json({ message: "Image upload failed" });
+          return serverError(res, "Image upload failed");
         }
       }
 
@@ -77,13 +85,12 @@ export default async function handler(
         .collection("gallery")
         .findOne({ _id: result.insertedId });
 
-      return res.status(201).json({ item: newItem });
+      return created(res, { item: newItem });
     }
 
-    res.setHeader("Allow", "GET, POST");
-    return res.status(405).json({ message: "Method not allowed" });
+    return methodNotAllowed(res);
   } catch (error) {
     console.error("/api/gallery error", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return serverError(res);
   }
 }

@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
-import Navbar from "@/app/components/navbar/Navbar";
 import { getUserColorTheme } from "@/lib/colorConfig";
 import { AttendanceRecord, UserData } from "@/types";
 import {
@@ -205,17 +204,14 @@ export default function Attendance() {
 
   if (status === "loading" || loading) {
     return (
-      <>
-        <Navbar />
-        <div className="min-h-screen flex justify-center items-center px-4">
-          <div className="bg-white p-6 sm:p-8 rounded-lg shadow-lg max-w-sm w-full">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="text-center mt-4 text-gray-600 text-sm sm:text-base">
-              Loading attendance records...
-            </p>
-          </div>
+      <div className="min-h-screen flex justify-center items-center px-4">
+        <div className="bg-white p-6 sm:p-8 rounded-lg shadow-lg max-w-sm w-full">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-center mt-4 text-gray-600 text-sm sm:text-base">
+            Loading attendance records...
+          </p>
         </div>
-      </>
+      </div>
     );
   }
 

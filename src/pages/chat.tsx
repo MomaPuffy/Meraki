@@ -14,6 +14,7 @@ export default function ChatPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newChatName, setNewChatName] = useState("");
   const [newChatDescription, setNewChatDescription] = useState("");
+  const [showSidebar, setShowSidebar] = useState(false); // Mobile sidebar toggle
 
   // Use ref to track if we've auto-selected a chat to prevent loops
   const hasAutoSelected = useRef(false);
@@ -71,6 +72,9 @@ export default function ChatPage() {
       await new Promise((resolve) => setTimeout(resolve, 100));
       setSelectedChat(chat);
       setChatSwitching(false);
+
+      // Close sidebar on mobile when chat is selected
+      setShowSidebar(false);
     },
     [selectedChat]
   );
@@ -169,150 +173,264 @@ export default function ChatPage() {
   const currentUserImage = session?.user?.image || undefined;
 
   return (
-    <div className="min-h-screen py-4 px-4">
+    <div className="min-h-screen py-2 sm:py-4 px-2 sm:px-4">
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-[calc(100vh-8rem)]">
-          {/* Sidebar */}
-          <div className="lg:col-span-1 bg-white rounded-lg shadow-lg p-4">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center space-x-2">
-                <UserAvatar
-                  src={currentUserImage}
-                  name={currentUserName}
-                  size="sm"
-                />
-                <h2 className="text-lg font-semibold">Chat Rooms</h2>
-              </div>
-              <button
-                onClick={() => setShowCreateForm(true)}
-                className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-              >
-                + New
-              </button>
-            </div>
-
-            {/* Error Display */}
-            {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-4 text-sm">
-                {error}
-                {chats.length === 0 && (
-                  <button
-                    onClick={initializeChats}
-                    className="block mt-2 text-blue-600 hover:text-blue-800 underline"
-                  >
-                    Initialize Default Chats
-                  </button>
+        <div className="flex flex-col lg:grid lg:grid-cols-4 gap-2 sm:gap-4 h-[calc(100vh-1rem)] sm:h-[calc(100vh-8rem)]">
+          {/* Mobile Header */}
+          <div className="lg:hidden bg-white rounded-lg shadow-lg p-3 mb-2 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <UserAvatar
+                src={currentUserImage}
+                name={currentUserName}
+                size="sm"
+              />
+              <div>
+                <h1 className="text-lg font-semibold">Chat</h1>
+                {selectedChat && (
+                  <p className="text-sm text-gray-600 truncate max-w-32">
+                    {selectedChat.name}
+                  </p>
                 )}
               </div>
-            )}
-
-            {/* Create Chat Form */}
-            {showCreateForm && (
-              <form
-                onSubmit={createChat}
-                className="mb-4 p-3 bg-gray-50 rounded"
+            </div>
+            <button
+              onClick={() => setShowSidebar(!showSidebar)}
+              className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 lg:hidden"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <input
-                  type="text"
-                  value={newChatName}
-                  onChange={(e) => setNewChatName(e.target.value)}
-                  placeholder="Chat name"
-                  className="w-full px-2 py-1 border rounded mb-2 text-sm"
-                  required
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
                 />
-                <input
-                  type="text"
-                  value={newChatDescription}
-                  onChange={(e) => setNewChatDescription(e.target.value)}
-                  placeholder="Description (optional)"
-                  className="w-full px-2 py-1 border rounded mb-2 text-sm"
-                />
-                <div className="flex space-x-2">
-                  <button
-                    type="submit"
-                    className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
-                  >
-                    Create
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateForm(false)}
-                    className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            )}
+              </svg>
+            </button>
+          </div>
 
-            {/* Chat List */}
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {chats.length === 0 ? (
-                <div className="text-center text-gray-500 py-8">
-                  <p className="text-sm">No chats available</p>
+          {/* Sidebar */}
+          <div
+            className={`
+            ${
+              showSidebar
+                ? "fixed inset-0 z-50 backdrop-blur-sm bg-white/20 lg:relative lg:bg-transparent lg:backdrop-blur-none"
+                : "hidden lg:block"
+            }
+            lg:col-span-1
+            `}
+          >
+            <div
+              className={`
+              ${showSidebar ? "absolute left-0 top-0 w-80 h-full" : "h-full"}
+              bg-white rounded-lg shadow-lg p-3 sm:p-4
+            `}
+            >
+              {/* Mobile Close Button */}
+              {showSidebar && (
+                <div className="flex justify-between items-center mb-4 lg:hidden">
+                  <h2 className="text-lg font-semibold">Chat Rooms</h2>
                   <button
-                    onClick={initializeChats}
-                    className="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                    onClick={() => setShowSidebar(false)}
+                    className="p-2 hover:bg-gray-100 rounded"
                   >
-                    Create Default Chats
-                  </button>
-                </div>
-              ) : (
-                chats.map((chat) => {
-                  const isSelected =
-                    selectedChat &&
-                    (selectedChat._id === chat._id ||
-                      selectedChat.id === chat.id);
-
-                  return (
-                    <button
-                      key={chat._id || chat.id}
-                      onClick={() => handleChatSelect(chat)}
-                      disabled={chatSwitching}
-                      className={`w-full text-left p-3 rounded transition-all duration-200 ${
-                        isSelected
-                          ? "bg-blue-100 border border-blue-300"
-                          : "hover:bg-gray-100"
-                      } ${
-                        chatSwitching ? "opacity-50 cursor-not-allowed" : ""
-                      }`}
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                      <div className="flex items-center space-x-2 mb-2">
-                        <UserAvatar name={chat.name} size="sm" />
-                        <div className="font-medium text-sm">{chat.name}</div>
-                      </div>
-                      {chat.description && (
-                        <div className="text-xs text-gray-600 truncate ml-7">
-                          {chat.description}
-                        </div>
-                      )}
-                      {chat.lastMessage && (
-                        <div className="text-xs text-gray-500 mt-1 truncate ml-7">
-                          {chat.lastMessage.senderName}:{" "}
-                          {chat.lastMessage.content}
-                        </div>
-                      )}
-                    </button>
-                  );
-                })
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
               )}
+
+              {/* Desktop Header */}
+              <div className="hidden lg:flex justify-between items-center mb-4">
+                <div className="flex items-center space-x-2">
+                  <UserAvatar
+                    src={currentUserImage}
+                    name={currentUserName}
+                    size="sm"
+                  />
+                  <h2 className="text-lg font-semibold">Chat Rooms</h2>
+                </div>
+                <button
+                  onClick={() => setShowCreateForm(true)}
+                  className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                >
+                  + New
+                </button>
+              </div>
+
+              {/* Mobile New Chat Button */}
+              <div className="lg:hidden mb-4">
+                <button
+                  onClick={() => setShowCreateForm(true)}
+                  className="w-full px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                >
+                  + Create New Chat
+                </button>
+              </div>
+
+              {/* Error Display */}
+              {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-4 text-sm">
+                  {error}
+                  {chats.length === 0 && (
+                    <button
+                      onClick={initializeChats}
+                      className="block mt-2 text-blue-600 hover:text-blue-800 underline"
+                    >
+                      Initialize Default Chats
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Create Chat Form */}
+              {showCreateForm && (
+                <form
+                  onSubmit={createChat}
+                  className="mb-4 p-3 bg-gray-50 rounded"
+                >
+                  <input
+                    type="text"
+                    value={newChatName}
+                    onChange={(e) => setNewChatName(e.target.value)}
+                    placeholder="Chat name"
+                    className="w-full px-2 py-1 border rounded mb-2 text-sm"
+                    required
+                  />
+                  <input
+                    type="text"
+                    value={newChatDescription}
+                    onChange={(e) => setNewChatDescription(e.target.value)}
+                    placeholder="Description (optional)"
+                    className="w-full px-2 py-1 border rounded mb-2 text-sm"
+                  />
+                  <div className="flex space-x-2">
+                    <button
+                      type="submit"
+                      className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+                    >
+                      Create
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateForm(false)}
+                      className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Chat List */}
+              <div className="space-y-2 max-h-64 sm:max-h-96">
+                {chats.length === 0 ? (
+                  <div className="text-center text-gray-500 py-8">
+                    <p className="text-sm">No chats available</p>
+                    <button
+                      onClick={initializeChats}
+                      className="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                    >
+                      Create Default Chats
+                    </button>
+                  </div>
+                ) : (
+                  chats.map((chat) => {
+                    const isSelected =
+                      selectedChat &&
+                      (selectedChat._id === chat._id ||
+                        selectedChat.id === chat.id);
+
+                    return (
+                      <button
+                        key={chat._id || chat.id}
+                        onClick={() => handleChatSelect(chat)}
+                        disabled={chatSwitching}
+                        className={`w-full text-left p-3 rounded transition-all duration-200 ${
+                          isSelected
+                            ? "bg-blue-100 border border-blue-300"
+                            : "hover:bg-gray-100"
+                        } ${
+                          chatSwitching ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2 mb-2">
+                          <UserAvatar name={chat.name} size="sm" />
+                          <div className="font-medium text-sm truncate">
+                            {chat.name}
+                          </div>
+                        </div>
+                        {chat.description && (
+                          <div className="text-xs text-gray-600 truncate ml-7">
+                            {chat.description}
+                          </div>
+                        )}
+                        {chat.lastMessage && (
+                          <div className="text-xs text-gray-500 mt-1 truncate ml-7">
+                            {chat.lastMessage.senderName}:{" "}
+                            {chat.lastMessage.content}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
             </div>
           </div>
 
           {/* Chat Area */}
-          <div className="lg:col-span-3">
+          <div className="flex-1 lg:col-span-3">
             {selectedChat ? (
               <div className="bg-white rounded-lg shadow-lg h-full flex flex-col overflow-hidden">
                 {/* Chat Header */}
-                <div className="bg-blue-600 text-white p-4 rounded-t-lg flex-shrink-0">
-                  <h2 className="text-xl font-semibold flex items-center">
-                    {selectedChat.name}
-                    {chatSwitching && (
-                      <div className="ml-2 animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    )}
-                  </h2>
+                <div className="bg-blue-600 text-white p-3 sm:p-4 rounded-t-lg flex-shrink-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      {/* Mobile back button */}
+                      <button
+                        onClick={() => setShowSidebar(true)}
+                        className="lg:hidden p-1 hover:bg-blue-700 rounded"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 6h16M4 12h16M4 18h16"
+                          />
+                        </svg>
+                      </button>
+                      <h2 className="text-lg sm:text-xl font-semibold flex items-center">
+                        {selectedChat.name}
+                        {chatSwitching && (
+                          <div className="ml-2 animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        )}
+                      </h2>
+                    </div>
+                  </div>
                   {selectedChat.description && (
-                    <p className="text-blue-100 text-sm">
+                    <p className="text-blue-100 text-sm mt-1">
                       {selectedChat.description}
                     </p>
                   )}
@@ -339,9 +457,17 @@ export default function ChatPage() {
               </div>
             ) : (
               <div className="bg-white rounded-lg shadow-lg h-full flex items-center justify-center">
-                <div className="text-center text-gray-500">
+                <div className="text-center text-gray-500 p-4">
                   <h3 className="text-lg font-medium mb-2">Welcome to Chat!</h3>
-                  <p>Select a chat room to start messaging</p>
+                  <p className="text-sm sm:text-base mb-4">
+                    Select a chat room to start messaging
+                  </p>
+                  <button
+                    onClick={() => setShowSidebar(true)}
+                    className="lg:hidden px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Browse Chat Rooms
+                  </button>
                 </div>
               </div>
             )}

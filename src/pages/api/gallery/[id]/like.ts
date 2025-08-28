@@ -3,6 +3,13 @@ import { getServerSession } from "next-auth";
 import clientPromise from "@/lib/mongodb";
 import { authOptions } from "../../auth/[...nextauth]";
 import { ObjectId, UpdateFilter, Document } from "mongodb";
+import {
+  ok,
+  badRequest,
+  unauthorized,
+  notFound,
+  serverError,
+} from "@/utils/apiResponse";
 
 export default async function handler(
   req: NextApiRequest,
@@ -10,11 +17,11 @@ export default async function handler(
 ) {
   const { id } = req.query;
   if (!id || Array.isArray(id)) {
-    return res.status(400).json({ message: "Invalid id" });
+    return badRequest(res, "Invalid id");
   }
 
   const session = await getServerSession(req, res, authOptions);
-  if (!session) return res.status(401).json({ message: "Not authenticated" });
+  if (!session) return unauthorized(res);
 
   try {
     const client = await clientPromise;
@@ -23,12 +30,11 @@ export default async function handler(
     const rawUserId = session.user?.id ?? session.user?.email;
     const userId =
       typeof rawUserId === "string" ? rawUserId : String(rawUserId || "");
-    if (!userId)
-      return res.status(401).json({ message: "Invalid user id in session" });
+    if (!userId) return unauthorized(res);
 
     // Check if user already liked
     const doc = await db.collection("gallery").findOne({ _id: galleryId });
-    if (!doc) return res.status(404).json({ message: "Not found" });
+    if (!doc) return notFound(res);
 
     const likedBy: string[] = doc.likedBy || [];
     const alreadyLiked = likedBy.includes(userId);
@@ -42,7 +48,7 @@ export default async function handler(
         .collection("gallery")
         .updateOne({ _id: galleryId }, update);
       if (!updateRes || updateRes.matchedCount === 0) {
-        return res.status(500).json({ message: "Failed to update like" });
+        return serverError(res, "Failed to update like");
       }
     } else {
       const update = {
@@ -53,16 +59,15 @@ export default async function handler(
         .collection("gallery")
         .updateOne({ _id: galleryId }, update);
       if (!updateRes || updateRes.matchedCount === 0) {
-        return res.status(500).json({ message: "Failed to update like" });
+        return serverError(res, "Failed to update like");
       }
     }
 
     const updated = await db.collection("gallery").findOne({ _id: galleryId });
-    if (!updated)
-      return res.status(500).json({ message: "Failed to fetch updated item" });
-    return res.json({ item: updated });
+    if (!updated) return serverError(res, "Failed to fetch updated item");
+    return ok(res, { item: updated });
   } catch (err) {
     console.error("like error", err);
-    return res.status(500).json({ message: "Server error" });
+    return serverError(res);
   }
 }

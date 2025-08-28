@@ -7,6 +7,7 @@ import { UserData, UserAttendanceModalData, AttendanceRecord } from "@/types";
 import { isAdminPosition } from "@/utils/adminRoles";
 import { IoClose } from "react-icons/io5";
 import DataTable, { Column, FilterOption } from "@/components/DataTable";
+import AttendancePhotoViewer from "@/components/ImageViewers/AttendancePhotoViewer";
 
 export default function Admin() {
   const { data: session, status } = useSession();
@@ -23,6 +24,14 @@ export default function Admin() {
     useState<UserAttendanceModalData | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<{
+    url: string;
+    thumbnail: string;
+    type: "timeIn" | "timeOut";
+    timestamp?: string;
+    userName?: string;
+  } | null>(null);
+  const [showPhotoViewer, setShowPhotoViewer] = useState(false);
 
   const fetchUsers = async () => {
     try {
@@ -149,6 +158,26 @@ export default function Admin() {
     setSelectedUser(null);
   };
 
+  const handlePhotoClick = (
+    imageData: { url: string; thumbnail: string },
+    type: "timeIn" | "timeOut",
+    record?: AttendanceRecord,
+    userName?: string
+  ) => {
+    setSelectedPhoto({
+      url: imageData.url,
+      thumbnail: imageData.thumbnail,
+      type,
+      timestamp: record
+        ? `${formatDateForDisplay(record.date)} at ${formatTimeForDisplay(
+            record[type] as string
+          )}`
+        : undefined,
+      userName: userName || selectedUser?.user.name,
+    });
+    setShowPhotoViewer(true);
+  };
+
   // Helper function to format time in PHT
   const formatTime = (dateString: string) => {
     return formatTimeForDisplay(dateString);
@@ -191,8 +220,10 @@ export default function Admin() {
               alt="Time In Photo"
               width={48}
               height={48}
-              className="rounded-lg object-cover cursor-pointer border-2 border-green-200"
-              onClick={() => window.open(record.timeInImage!.url, "_blank")}
+              className="rounded-lg object-cover cursor-pointer border-2 border-green-200 hover:border-green-400 transition-colors"
+              onClick={() =>
+                handlePhotoClick(record.timeInImage!, "timeIn", record)
+              }
               title="Click to view Time In photo"
             />
           )}
@@ -202,8 +233,10 @@ export default function Admin() {
               alt="Time Out Photo"
               width={48}
               height={48}
-              className="rounded-lg object-cover cursor-pointer border-2 border-red-200"
-              onClick={() => window.open(record.timeOutImage!.url, "_blank")}
+              className="rounded-lg object-cover cursor-pointer border-2 border-red-200 hover:border-red-400 transition-colors"
+              onClick={() =>
+                handlePhotoClick(record.timeOutImage!, "timeOut", record)
+              }
               title="Click to view Time Out photo"
             />
           )}
@@ -290,8 +323,10 @@ export default function Admin() {
                   alt="Time In Photo"
                   width={48}
                   height={48}
-                  className="rounded-lg object-cover cursor-pointer border-2 border-green-200 mx-auto"
-                  onClick={() => window.open(record.timeInImage!.url, "_blank")}
+                  className="rounded-lg object-cover cursor-pointer border-2 border-green-200 mx-auto hover:border-green-400 transition-colors"
+                  onClick={() =>
+                    handlePhotoClick(record.timeInImage!, "timeIn", record)
+                  }
                   title="Click to view Time In photo"
                 />
                 <div className="text-xs text-green-600 mt-1 break-words">
@@ -306,9 +341,9 @@ export default function Admin() {
                   alt="Time Out Photo"
                   width={48}
                   height={48}
-                  className="rounded-lg object-cover cursor-pointer border-2 border-red-200 mx-auto"
+                  className="rounded-lg object-cover cursor-pointer border-2 border-red-200 mx-auto hover:border-red-400 transition-colors"
                   onClick={() =>
-                    window.open(record.timeOutImage!.url, "_blank")
+                    handlePhotoClick(record.timeOutImage!, "timeOut", record)
                   }
                   title="Click to view Time Out photo"
                 />
@@ -841,6 +876,13 @@ export default function Admin() {
           </div>
         </div>
       )}
+
+      {/* Attendance Photo Viewer */}
+      <AttendancePhotoViewer
+        isOpen={showPhotoViewer}
+        onClose={() => setShowPhotoViewer(false)}
+        photo={selectedPhoto}
+      />
     </>
   );
 }

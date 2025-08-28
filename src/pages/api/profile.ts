@@ -4,6 +4,14 @@ import { authOptions } from "./auth/[...nextauth]";
 import clientPromise from "@/lib/mongodb";
 import { getUserColorKey } from "@/lib/colorConfig";
 import { uploadImage } from "@/lib/cloudinary";
+import {
+  ok,
+  unauthorized,
+  notFound,
+  badRequest,
+  methodNotAllowed,
+  serverError,
+} from "@/utils/apiResponse";
 
 export default async function handler(
   req: NextApiRequest,
@@ -14,7 +22,7 @@ export default async function handler(
     const session = await getServerSession(req, res, authOptions);
 
     if (!session || !session.user?.email) {
-      return res.status(401).json({ message: "Not authenticated" });
+      return unauthorized(res);
     }
 
     const client = await clientPromise;
@@ -27,14 +35,14 @@ export default async function handler(
       });
 
       if (!user) {
-        return res.status(404).json({ message: "User not found" });
+        return notFound(res, "User not found");
       }
 
       // Return user data (excluding password for security)
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, ...userData } = user;
 
-      res.status(200).json({
+      return ok(res, {
         user: {
           id: user._id.toString(),
           name: user.name,
@@ -50,13 +58,11 @@ export default async function handler(
       const { name, department, image } = req.body;
 
       if (!name || name.trim().length === 0) {
-        return res.status(400).json({ message: "Name is required" });
+        return badRequest(res, "Name is required");
       }
 
       if (name.length > 100) {
-        return res
-          .status(400)
-          .json({ message: "Name must be less than 100 characters" });
+        return badRequest(res, "Name must be less than 100 characters");
       }
 
       // Get current user to preserve position and calculate color
@@ -65,7 +71,7 @@ export default async function handler(
       });
 
       if (!currentUser) {
-        return res.status(404).json({ message: "User not found" });
+        return notFound(res, "User not found");
       }
 
       // Calculate color based on current position and new department
@@ -86,9 +92,7 @@ export default async function handler(
           imageUrl = uploadResult.url;
         } catch (uploadError) {
           console.error("Profile image upload failed:", uploadError);
-          return res
-            .status(500)
-            .json({ message: "Failed to upload profile image" });
+          return serverError(res, "Failed to upload profile image");
         }
       }
 
@@ -106,7 +110,7 @@ export default async function handler(
       );
 
       if (result.matchedCount === 0) {
-        return res.status(404).json({ message: "User not found" });
+        return notFound(res, "User not found");
       }
 
       // Fetch updated user data
@@ -115,14 +119,14 @@ export default async function handler(
       });
 
       if (!updatedUser) {
-        return res.status(404).json({ message: "User not found after update" });
+        return notFound(res, "User not found after update");
       }
 
       // Return updated user data (excluding password for security)
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, ...userData } = updatedUser;
 
-      res.status(200).json({
+      return ok(res, {
         message: "Profile updated successfully",
         user: {
           id: updatedUser._id.toString(),
@@ -137,10 +141,10 @@ export default async function handler(
         },
       });
     } else {
-      return res.status(405).json({ message: "Method not allowed" });
+      return methodNotAllowed(res);
     }
   } catch (error) {
     console.error("Profile API error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    return serverError(res, "Internal server error");
   }
 }

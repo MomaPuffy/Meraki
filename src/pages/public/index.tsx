@@ -5,6 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import UpcomingEvents from "@/app/components/calendar/UpcomingEvents";
 import { useAuth } from "@/hooks/useAuth";
+import Modal from "@/components/Modal";
+import ImageViewer from "@/components/ImageViewers/ImageViewer";
+import { IoClose } from "react-icons/io5";
 
 // gallery comes from the API
 
@@ -46,6 +49,10 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<GalleryItem | null>(null);
+  const [showImageViewer, setShowImageViewer] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,6 +89,7 @@ export default function Home() {
         setFile(null);
         setFilePreview(null);
         setCategory(CATEGORIES[1]);
+        setShowAddModal(false);
       } else {
         const err = await res.json();
         console.error(err);
@@ -108,6 +116,79 @@ export default function Home() {
     setFile(f);
     const url = URL.createObjectURL(f);
     setFilePreview(url);
+  };
+
+  const handleImageClick = (item: GalleryItem) => {
+    setSelectedImage(item);
+    setShowImageViewer(true);
+  };
+
+  const handleImageLike = async () => {
+    if (!selectedImage || !isAuthenticated) {
+      if (!isAuthenticated) {
+        alert("Please log in to like items.");
+      }
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/gallery/${selectedImage._id}/like`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const json = await res.json();
+        // Update both gallery and selectedImage
+        setGallery((g) =>
+          g.map((it) => (it._id === json.item._id ? json.item : it))
+        );
+        setSelectedImage(json.item);
+      } else {
+        const err = await res.json();
+        console.error(err);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDelete = async (itemId: string) => {
+    if (
+      !confirm(
+        "Are you sure you want to delete this artwork? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    setDeletingId(itemId);
+    try {
+      const res = await fetch(`/api/gallery/${itemId}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        // Remove from gallery state
+        setGallery((g) => g.filter((item) => (item._id || item.id) !== itemId));
+
+        // Close image viewer if the deleted item was being viewed
+        if (
+          selectedImage &&
+          (selectedImage._id || selectedImage.id) === itemId
+        ) {
+          setShowImageViewer(false);
+          setSelectedImage(null);
+        }
+      } else {
+        const err = await res.json();
+        console.error(err);
+        alert(err.message || "Failed to delete artwork");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete artwork");
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -163,59 +244,21 @@ export default function Home() {
       {/* Gallery */}
       <section id="gallery" className="py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-start justify-between mb-6 flex-col sm:flex-row sm:items-center gap-4">
-            <h2 className="text-2xl font-semibold text-gray-900">
-              Community Gallery
-            </h2>
-            {isAdmin && (
-              <form
-                onSubmit={handleAdd}
-                className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto"
-              >
-                <input
-                  placeholder="Title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="px-2 py-1 rounded border w-full sm:w-40"
-                />
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="px-3 py-2 rounded border w-full sm:w-32 text-sm"
-                >
-                  {CATEGORIES.slice(1).map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => onFileChange(e.target.files?.[0])}
-                    className="px-2 py-1 rounded border w-full sm:w-40 text-sm"
-                  />
-                </div>
-                {filePreview && (
-                  <Image
-                    src={filePreview}
-                    alt="preview"
-                    width={64}
-                    height={64}
-                    className="object-cover rounded border"
-                  />
-                )}
+          <div className="flex flex-col gap-4 mb-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-semibold text-gray-900">
+                Community Gallery
+              </h2>
+              {isAdmin && (
                 <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-3 py-1 rounded bg-purple-600 text-white text-sm w-full sm:w-auto"
+                  onClick={() => setShowAddModal(true)}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
                 >
-                  {submitting ? "Adding..." : "Add"}
+                  Add New Artwork
                 </button>
-              </form>
-            )}
-            <div className="flex gap-2 flex-wrap sm:flex-nowrap sm:overflow-x-auto sm:pb-2">
+              )}
+            </div>
+            <div className="flex gap-2 flex-wrap">
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat}
@@ -241,7 +284,10 @@ export default function Home() {
                   key={item._id ?? item.id}
                   className="bg-white rounded-lg overflow-hidden shadow group"
                 >
-                  <div className="relative w-full h-40 sm:h-44">
+                  <div
+                    className="relative w-full h-40 sm:h-44 cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => handleImageClick(item)}
+                  >
                     <Image
                       src={item.src}
                       alt={item.title}
@@ -249,6 +295,53 @@ export default function Home() {
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                       className="object-cover"
                     />
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2">
+                        <svg
+                          className="w-8 h-8 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"
+                          />
+                        </svg>
+                        {isAdmin && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(item._id || item.id!);
+                            }}
+                            disabled={deletingId === (item._id || item.id)}
+                            className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors disabled:opacity-50"
+                            title="Delete artwork"
+                          >
+                            {deletingId === (item._id || item.id) ? (
+                              <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                            ) : (
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                />
+                              </svg>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <figcaption className="p-3">
                     <div className="flex items-center justify-between">
@@ -359,6 +452,164 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Add Artwork Modal */}
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Add New Artwork"
+        maxWidth="max-w-lg"
+      >
+        <form onSubmit={handleAdd} className="space-y-4">
+          <div>
+            <label
+              htmlFor="title"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Title
+            </label>
+            <input
+              id="title"
+              placeholder="Enter artwork title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              required
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="category"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Category
+            </label>
+            <select
+              id="category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              {CATEGORIES.slice(1).map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Upload Image
+            </label>
+            <div
+              onDrop={(e) => {
+                e.preventDefault();
+                const files = e.dataTransfer.files;
+                if (files && files[0]) {
+                  onFileChange(files[0]);
+                }
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              onDragEnter={(e) => e.preventDefault()}
+              className="w-full px-6 py-8 border-2 border-dashed border-gray-300 rounded-md text-center hover:border-purple-400 transition-colors cursor-pointer"
+              onClick={() => document.getElementById("imageFile")?.click()}
+            >
+              <div className="text-gray-500">
+                <svg
+                  className="mx-auto h-12 w-12 text-gray-400 mb-3"
+                  stroke="currentColor"
+                  fill="none"
+                  viewBox="0 0 48 48"
+                >
+                  <path
+                    d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <p className="text-sm">
+                  <span className="font-medium text-purple-600">
+                    Click to upload
+                  </span>{" "}
+                  or drag and drop
+                </p>
+                <p className="text-xs text-gray-400">
+                  PNG, JPG, GIF up to 10MB
+                </p>
+              </div>
+            </div>
+            <input
+              id="imageFile"
+              type="file"
+              accept="image/*"
+              onChange={(e) => onFileChange(e.target.files?.[0])}
+              className="hidden"
+            />
+          </div>
+
+          {filePreview && (
+            <div className="flex justify-center">
+              <div className="relative">
+                <Image
+                  src={filePreview}
+                  alt="Preview"
+                  width={200}
+                  height={200}
+                  className="object-cover rounded-lg border"
+                />
+                <button
+                  type="button"
+                  onClick={() => onFileChange(undefined)}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
+                >
+                  <IoClose />
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {submitting ? "Adding..." : "Add Artwork"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Image Viewer Modal */}
+      <ImageViewer
+        isOpen={showImageViewer}
+        onClose={() => setShowImageViewer(false)}
+        item={selectedImage}
+        isLiked={
+          selectedImage
+            ? (selectedImage.likedBy || []).includes(user?.id || "")
+            : false
+        }
+        onLike={handleImageLike}
+        isAuthenticated={isAuthenticated}
+        isAdmin={isAdmin}
+        onDelete={handleDelete}
+        isDeleting={
+          selectedImage
+            ? deletingId === (selectedImage._id || selectedImage.id)
+            : false
+        }
+      />
     </main>
   );
 }

@@ -265,11 +265,11 @@ export default function Navbar() {
         <ul className="py-2 text-white">
           <li>
             <Link
-              href="/"
+              href="/dashboard"
               className="block px-4 py-3 hover:bg-[#424242] transition-colors"
               onClick={() => setShowMobileMenu(false)}
             >
-              Home
+              Dashboard
             </Link>
           </li>
           <li>

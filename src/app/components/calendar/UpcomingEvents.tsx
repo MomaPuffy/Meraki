@@ -20,7 +20,8 @@ export default function UpcomingEvents() {
         if (!response.ok) {
           throw new Error("Failed to fetch events");
         }
-        const events = await response.json();
+        const data = await response.json();
+        const events = data.events || []; // Handle the new response format
 
         // Filter and sort upcoming events
         const now = new Date();

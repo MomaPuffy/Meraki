@@ -6,6 +6,13 @@ import ChatWidget from "@/app/components/chat/ChatWidget";
 import UpcomingEvents from "@/app/components/calendar/UpcomingEvents";
 import { getUserColorTheme } from "@/lib/colorConfig";
 import Link from "next/link";
+import {
+  IoLogoFacebook,
+  IoShareSocial,
+  IoLogoInstagram,
+  IoLogoTiktok,
+} from "react-icons/io5";
+import { FaCartShopping } from "react-icons/fa6";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -53,7 +60,7 @@ export default function Home() {
   const userColors = getUserColorTheme(session.user?.position);
 
   return (
-  <div className="min-h-screen py-4 sm:py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen py-4 sm:py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Welcome Header */}
         <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
@@ -199,63 +206,55 @@ export default function Home() {
           {/* Recent Activity Module */}
           <div className="col-span-1 md:col-span-2 lg:col-span-1 xl:col-span-2 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-pink-50">
-              <h2 className="text-lg font-semibold text-gray-400 flex items-center">
-                <svg
-                  className="w-5 h-5 text-purple-600 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
-                Module Slot
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                <IoShareSocial className="w-5 h-5 text-purple-600 mr-2" />
+                Social Media
               </h2>
             </div>
-            <div className="p-6 text-center">
-              <div className="mb-4">
-                <div className="w-12 h-12 bg-gray-100 rounded-lg mx-auto flex items-center justify-center mb-3">
-                  <svg
-                    className="w-6 h-6 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                </div>
-                <p className="text-gray-400 text-sm">Ready for new content</p>
+            <div className="p-6">
+              <div className="grid grid-cols-3 gap-4">
+                {/* Facebook */}
+                <Link
+                  href="https://www.facebook.com/share/g/1AL7ti6KMj/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  <IoLogoFacebook className="w-5 h-5 mr-2" />
+                  Facebook
+                </Link>
+
+                {/* TikTok */}
+                <Link
+                  href="https://www.tiktok.com/@pinakacutenaartclub"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center p-3 bg-black hover:bg-gray-800 text-white rounded-lg transition-colors"
+                >
+                  <IoLogoTiktok className="w-5 h-5 mr-2" />
+                  TikTok
+                </Link>
+
+                {/* Instagram */}
+                <Link
+                  href="https://www.instagram.com/pinakacutenaartclub"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center p-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg transition-colors"
+                >
+                  <IoLogoInstagram className="w-5 h-5 mr-2" />
+                  Instagram
+                </Link>
               </div>
             </div>
           </div>
 
-          {/* Placeholder Modules for Future Expansion */}
+          {/* Shop */}
           <div className="bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-yellow-50">
               <h2 className="text-lg font-semibold text-gray-400 flex items-center">
-                <svg
-                  className="w-5 h-5 text-orange-400 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                  />
-                </svg>
-                Module Slot
+                <FaCartShopping className="w-5 h-5 text-orange-400 mr-2" />
+                Shop
               </h2>
             </div>
             <div className="p-6 text-center">
@@ -274,7 +273,7 @@ export default function Home() {
                   />
                 </svg>
               </div>
-              <p className="text-gray-400 text-sm">Ready for new content</p>
+              <p className="text-gray-400 text-sm">Coming Soon</p>
             </div>
           </div>
 

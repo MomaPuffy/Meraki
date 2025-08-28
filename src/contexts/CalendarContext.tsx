@@ -51,7 +51,8 @@ function CalendarProviderImpl({ children }: { children: React.ReactNode }) {
         );
         return;
       }
-      const data = await response.json();
+      const responseData = await response.json();
+      const data = responseData.events || []; // Handle the new response format
       setEvents(
         data.map((event: RawEventData) => ({
           ...event,

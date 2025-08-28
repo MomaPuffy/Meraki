@@ -2,25 +2,29 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import clientPromise from "@/lib/mongodb";
 import bcrypt from "bcryptjs";
 import { getUserColorKey } from "@/lib/colorConfig";
+import {
+  created,
+  badRequest,
+  methodNotAllowed,
+  serverError,
+} from "@/utils/apiResponse";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   if (req.method !== "POST") {
-    return res.status(405).json({ message: "Method not allowed" });
+    return methodNotAllowed(res);
   }
 
   const { name, email, password, department, position } = req.body;
 
   if (!name || !email || !password) {
-    return res.status(400).json({ message: "Missing required fields" });
+    return badRequest(res, "Missing required fields");
   }
 
   if (password.length < 6) {
-    return res
-      .status(400)
-      .json({ message: "Password must be at least 6 characters long" });
+    return badRequest(res, "Password must be at least 6 characters long");
   }
 
   try {
@@ -33,14 +37,12 @@ export default async function handler(
     if (existingUser) {
       // Check if the user was created via Google OAuth
       if (existingUser.provider === "google") {
-        return res.status(400).json({
-          message:
-            "An account with this email already exists. Please sign in with Google.",
-        });
+        return badRequest(
+          res,
+          "An account with this email already exists. Please sign in with Google."
+        );
       } else {
-        return res.status(400).json({
-          message: "User already exists with this email",
-        });
+        return badRequest(res, "User already exists with this email");
       }
     }
 
@@ -59,12 +61,12 @@ export default async function handler(
       createdAt: new Date(),
     });
 
-    res.status(201).json({
+    return created(res, {
       message: "User created successfully",
       userId: result.insertedId,
     });
   } catch (error) {
     console.error("Registration error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    return serverError(res, "Internal server error");
   }
 }

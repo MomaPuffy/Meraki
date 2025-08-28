@@ -14,7 +14,7 @@ const Footer = () => {
       name: "TikTok",
       icon: FaTiktok,
       url: "https://tiktok.com/@pinakacutenaartclub", // Replace with your actual TikTok URL
-      color: "hover:text-black",
+      color: "hover:text-gray-700",
     },
     {
       name: "Facebook",
