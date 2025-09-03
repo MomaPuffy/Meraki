@@ -176,43 +176,6 @@ export default function ChatPage() {
     <div className="min-h-screen py-2 sm:py-4 px-2 sm:px-4">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col lg:grid lg:grid-cols-4 gap-2 sm:gap-4 h-[calc(100vh-1rem)] sm:h-[calc(100vh-8rem)]">
-          {/* Mobile Header */}
-          <div className="lg:hidden bg-white rounded-lg shadow-lg p-3 mb-2 flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <UserAvatar
-                src={currentUserImage}
-                name={currentUserName}
-                size="sm"
-              />
-              <div>
-                <h1 className="text-lg font-semibold">Chat</h1>
-                {selectedChat && (
-                  <p className="text-sm text-gray-600 truncate max-w-32">
-                    {selectedChat.name}
-                  </p>
-                )}
-              </div>
-            </div>
-            <button
-              onClick={() => setShowSidebar(!showSidebar)}
-              className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 lg:hidden"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            </button>
-          </div>
-
           {/* Sidebar */}
           <div
             className={`

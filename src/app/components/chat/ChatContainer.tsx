@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Message, ChatContainerProps } from "@/types/chat";
 import { UserAvatar } from "./UserAvatar";
+import { useChatSocket } from "@/hooks/useChatSocket";
 
 export function ChatContainer({
   chatId,
@@ -14,11 +15,82 @@ export function ChatContainer({
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const lastTimestampRef = useRef<string | null>(null);
+  const pollAbortRef = useRef<AbortController | null>(null);
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const stopPollingRef = useRef(false);
 
   // Validate chatId format
   const isValidObjectId = (id: string) => {
     return /^[0-9a-fA-F]{24}$/.test(id);
   };
+
+  // small helper to safely read string fields from a loosely typed object
+  const getStringField = useCallback(
+    (
+      obj: Record<string, unknown> | undefined,
+      key: string
+    ): string | undefined => {
+      if (!obj) return undefined;
+      const v = obj[key];
+      return typeof v === "string" ? v : undefined;
+    },
+    []
+  );
+
+  const getMessageId = useCallback(
+    (m: Partial<Message> | Record<string, unknown>): string =>
+      getStringField(m as Record<string, unknown>, "id") ??
+      getStringField(m as Record<string, unknown>, "_id") ??
+      `${getStringField(m as Record<string, unknown>, "timestamp") ?? ""}|${
+        getStringField(m as Record<string, unknown>, "content") ?? ""
+      }|${getStringField(m as Record<string, unknown>, "senderId") ?? ""}`,
+    [getStringField]
+  );
+
+  // Normalize message to ensure stable id and ISO timestamp
+  const normalizeMessage = useCallback(
+    (m: Partial<Message> | Record<string, unknown>): Message => {
+      const id = getMessageId(m);
+      const tsRaw =
+        getStringField(m as Record<string, unknown>, "timestamp") ??
+        getStringField(m as Record<string, unknown>, "createdAt") ??
+        new Date().toISOString();
+      const timestamp = new Date(tsRaw).toISOString();
+      return {
+        ...(m as Record<string, unknown>),
+        id,
+        timestamp,
+      } as unknown as Message;
+    },
+    [getMessageId, getStringField]
+  );
+
+  // Merge incoming messages into state deduping by stable id and keeping chronological order
+  const mergeMessages = useCallback(
+    (incoming: Array<Partial<Message> | Record<string, unknown>>) => {
+      if (!incoming || incoming.length === 0) return;
+      setMessages((prev) => {
+        const map = new Map<string, Message>();
+        // add previous messages
+        prev.forEach((m) => map.set(getMessageId(m), m));
+        // add normalized incoming (skip if id exists)
+        incoming.map(normalizeMessage).forEach((m) => {
+          const id = getMessageId(m);
+          if (!map.has(id)) map.set(id, m);
+        });
+        const merged = Array.from(map.values()).sort(
+          (a, b) =>
+            Date.parse(a.timestamp as unknown as string) -
+            Date.parse(b.timestamp as unknown as string)
+        );
+        // update seenIdsRef to include all known ids
+        merged.forEach((m) => seenIdsRef.current.add(getMessageId(m)));
+        return merged;
+      });
+    },
+    [normalizeMessage, getMessageId]
+  );
 
   // Auto-scroll to bottom within the messages container only
   const scrollToBottom = () => {
@@ -28,31 +100,49 @@ export function ChatContainer({
     }
   };
 
-  const fetchMessages = useCallback(async () => {
-    if (!chatId || !isValidObjectId(chatId)) {
-      setError("Invalid chat ID");
-      return;
-    }
-
-    try {
-      setError(null);
-
-      const response = await fetch(`/api/chat/${chatId}/messages`);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+  // fetch only new messages since lastTimestamp (if provided)
+  const fetchMessages = useCallback(
+    async (since?: string): Promise<Message[]> => {
+      if (!chatId || !isValidObjectId(chatId)) {
+        setError("Invalid chat ID");
+        return [];
       }
 
-      const fetchedMessages = await response.json();
-      setMessages(fetchedMessages);
-    } catch (error) {
-      console.error("Error fetching messages:", error);
-      setError(
-        error instanceof Error ? error.message : "Failed to fetch messages"
-      );
-    }
-  }, [chatId]);
+      try {
+        setError(null);
+        pollAbortRef.current?.abort();
+        const controller = new AbortController();
+        pollAbortRef.current = controller;
+
+        const url = new URL(`/api/chat/${chatId}/messages`, location.origin);
+        if (since) url.searchParams.set("since", since);
+
+        const response = await fetch(url.toString(), {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(
+            (errorData as { error?: string }).error || `HTTP ${response.status}`
+          );
+        }
+
+        const fetchedRaw = await response.json().catch(() => []);
+        const fetched: Array<Partial<Message> | Record<string, unknown>> =
+          Array.isArray(fetchedRaw) ? fetchedRaw : [];
+        return fetched.map(normalizeMessage);
+      } catch (err) {
+        if ((err as { name?: string })?.name === "AbortError") return [];
+        console.error("Error fetching messages:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch messages"
+        );
+        return [];
+      }
+    },
+    [chatId, normalizeMessage]
+  );
 
   useEffect(() => {
     // Small delay to ensure DOM is updated
@@ -61,25 +151,49 @@ export function ChatContainer({
 
   // Fetch messages when chat changes
   useEffect(() => {
-    if (chatId && isValidObjectId(chatId)) {
-      fetchMessages();
-      setError(null);
-    } else if (chatId) {
-      setError(`Invalid chat ID format: ${chatId}`);
-      setMessages([]);
-    }
-  }, [chatId, fetchMessages]);
+    stopPollingRef.current = false;
+    lastTimestampRef.current = null;
+    seenIdsRef.current = new Set();
+    (async () => {
+      if (chatId && isValidObjectId(chatId)) {
+        try {
+          const initial = await fetchMessages();
+          // merge (dedupe + sort) instead of blind replace/append
+          mergeMessages(initial);
+          if (initial && initial.length) {
+            const maxTs = Math.max(
+              ...initial.map(
+                (m) => Date.parse(m.timestamp as unknown as string) || 0
+              )
+            );
+            if (maxTs > 0)
+              lastTimestampRef.current = new Date(maxTs).toISOString();
+          }
+          setError(null);
+        } catch {
+          // error set in fetchMessages
+        }
+      } else if (chatId) {
+        setError(`Invalid chat ID format: ${chatId}`);
+        setMessages([]);
+      }
+    })();
+  }, [chatId, fetchMessages, mergeMessages]);
 
-  // Polling for new messages
-  useEffect(() => {
-    if (!chatId || !isValidObjectId(chatId)) return;
+  // Improved poll loop: non-overlapping, since param, backoff, pause on hidden
+  // Replace polling with WebSocket hook; onMessage will merge incoming messages
+  const onSocketMessage = useCallback(
+    (m: Message) => {
+      // normalize + merge incoming
+      mergeMessages([m]);
+      const ts = Date.parse(m.timestamp as unknown as string) || 0;
+      if (ts > 0) lastTimestampRef.current = new Date(ts).toISOString();
+    },
+    [mergeMessages]
+  );
 
-    const interval = setInterval(() => {
-      fetchMessages();
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [chatId, fetchMessages]);
+  // establish socket connection; server broadcasts "message:new" which calls onSocketMessage
+  useChatSocket(chatId, onSocketMessage);
 
   const sendMessage = async () => {
     if (!newMessage.trim() || isLoading || !chatId || !isValidObjectId(chatId))
@@ -110,8 +224,9 @@ export function ChatContainer({
       }
 
       const savedMessage = await response.json();
-
-      setMessages((prev) => [...prev, savedMessage]);
+      // normalize + merge sent message to avoid duplicates even if server returns full history
+      const normalized = normalizeMessage(savedMessage);
+      mergeMessages([normalized]);
       setNewMessage("");
     } catch (error) {
       console.error("Error sending message:", error);
@@ -181,7 +296,7 @@ export function ChatContainer({
         ) : (
           messages.map((message) => (
             <div
-              key={message.id}
+              key={getMessageId(message)}
               className={`flex items-start space-x-2 ${
                 message.senderId === currentUserId
                   ? "justify-end"
