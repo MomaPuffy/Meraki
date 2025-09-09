@@ -10,6 +10,7 @@ import {
 } from "@/utils/dateUtils";
 import DataTable, { Column } from "@/components/DataTable";
 import * as Camera from "@capacitor/camera";
+import { useAsyncUpload } from "@/hooks/useAsyncUpload";
 
 // Minimal runtime shape for the Capacitor Camera photo result we use.
 type CapacitorPhoto = {
@@ -31,6 +32,25 @@ export default function Attendance() {
   const [actionType, setActionType] = useState<"time-in" | "time-out" | null>(
     null
   );
+  const [uploadStatus, setUploadStatus] = useState<string>("");
+
+  // Initialize async upload hook
+  const { startPolling } = useAsyncUpload({
+    onComplete: (result) => {
+      console.log("Upload completed:", result);
+      setUploadStatus("Upload completed successfully!");
+      // Refresh attendance records to show the updated images
+      fetchAttendanceRecords();
+      // Clear status after a few seconds
+      setTimeout(() => setUploadStatus(""), 3000);
+    },
+    onError: (error) => {
+      console.error("Upload failed:", error);
+      setUploadStatus(`Upload failed: ${error}`);
+      // Clear status after a few seconds
+      setTimeout(() => setUploadStatus(""), 5000);
+    },
+  });
   // Using Capacitor Camera plugin via dynamic import (client-only). No live preview.
 
   useEffect(() => {
@@ -149,8 +169,10 @@ export default function Attendance() {
     image?: string
   ) => {
     setActionLoading(true);
+    setUploadStatus("");
+
     try {
-      const response = await fetch("/api/attendance", {
+      const response = await fetch("/api/attendance/async", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -162,7 +184,15 @@ export default function Attendance() {
 
       if (response.ok) {
         setMessage(data.message);
-        fetchAttendanceRecords(); // Refresh the table
+
+        // If there's an upload job, start polling for completion
+        if (data.uploadJobId && image) {
+          setUploadStatus("Uploading image...");
+          startPolling(data.uploadJobId);
+        }
+
+        // Refresh the table immediately (will show pending status for images)
+        fetchAttendanceRecords();
       } else {
         setMessage(data.error || "Failed to record attendance");
       }
@@ -274,28 +304,64 @@ export default function Attendance() {
       mobileHidden: true,
       render: (record) => (
         <div className="flex gap-2 justify-center">
+          {/* Time In Image */}
           {record.timeInImage && (
-            <Image
-              src={record.timeInImage.thumbnail}
-              alt="Time In Photo"
-              width={48}
-              height={48}
-              className="rounded-lg object-cover cursor-pointer border-2 border-green-200"
-              onClick={() => window.open(record.timeInImage!.url, "_blank")}
-              title="Click to view Time In photo"
-            />
+            <>
+              {record.timeInImage.status === "pending" ? (
+                <div className="w-12 h-12 rounded-lg border-2 border-green-200 flex items-center justify-center bg-green-50">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                </div>
+              ) : record.timeInImage.status === "failed" ? (
+                <div
+                  className="w-12 h-12 rounded-lg border-2 border-red-200 flex items-center justify-center bg-red-50"
+                  title="Upload failed"
+                >
+                  <span className="text-red-600 text-xs">✗</span>
+                </div>
+              ) : record.timeInImage.thumbnail ? (
+                <Image
+                  src={record.timeInImage.thumbnail}
+                  alt="Time In Photo"
+                  width={48}
+                  height={48}
+                  className="rounded-lg object-cover cursor-pointer border-2 border-green-200"
+                  onClick={() => window.open(record.timeInImage!.url, "_blank")}
+                  title="Click to view Time In photo"
+                />
+              ) : null}
+            </>
           )}
+
+          {/* Time Out Image */}
           {record.timeOutImage && (
-            <Image
-              src={record.timeOutImage.thumbnail}
-              alt="Time Out Photo"
-              width={48}
-              height={48}
-              className="rounded-lg object-cover cursor-pointer border-2 border-red-200"
-              onClick={() => window.open(record.timeOutImage!.url, "_blank")}
-              title="Click to view Time Out photo"
-            />
+            <>
+              {record.timeOutImage.status === "pending" ? (
+                <div className="w-12 h-12 rounded-lg border-2 border-red-200 flex items-center justify-center bg-red-50">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                </div>
+              ) : record.timeOutImage.status === "failed" ? (
+                <div
+                  className="w-12 h-12 rounded-lg border-2 border-red-200 flex items-center justify-center bg-red-50"
+                  title="Upload failed"
+                >
+                  <span className="text-red-600 text-xs">✗</span>
+                </div>
+              ) : record.timeOutImage.thumbnail ? (
+                <Image
+                  src={record.timeOutImage.thumbnail}
+                  alt="Time Out Photo"
+                  width={48}
+                  height={48}
+                  className="rounded-lg object-cover cursor-pointer border-2 border-red-200"
+                  onClick={() =>
+                    window.open(record.timeOutImage!.url, "_blank")
+                  }
+                  title="Click to view Time Out photo"
+                />
+              ) : null}
+            </>
           )}
+
           {!record.timeInImage && !record.timeOutImage && (
             <span className="text-gray-400 text-xs">No photos</span>
           )}
@@ -374,35 +440,68 @@ export default function Attendance() {
           <div className="flex gap-2 flex-wrap">
             {record.timeInImage && (
               <div className="text-center flex-shrink-0">
-                <Image
-                  src={record.timeInImage.thumbnail}
-                  alt="Time In Photo"
-                  width={48}
-                  height={48}
-                  className="rounded-lg object-cover cursor-pointer border-2 border-green-200 mx-auto"
-                  onClick={() => window.open(record.timeInImage!.url, "_blank")}
-                  title="Click to view Time In photo"
-                />
+                {record.timeInImage.status === "pending" ? (
+                  <div className="w-12 h-12 rounded-lg border-2 border-green-200 flex items-center justify-center bg-green-50 mx-auto">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                  </div>
+                ) : record.timeInImage.status === "failed" ? (
+                  <div
+                    className="w-12 h-12 rounded-lg border-2 border-red-200 flex items-center justify-center bg-red-50 mx-auto"
+                    title="Upload failed"
+                  >
+                    <span className="text-red-600 text-xs">✗</span>
+                  </div>
+                ) : record.timeInImage.thumbnail ? (
+                  <Image
+                    src={record.timeInImage.thumbnail}
+                    alt="Time In Photo"
+                    width={48}
+                    height={48}
+                    className="rounded-lg object-cover cursor-pointer border-2 border-green-200 mx-auto"
+                    onClick={() =>
+                      window.open(record.timeInImage!.url, "_blank")
+                    }
+                    title="Click to view Time In photo"
+                  />
+                ) : null}
                 <div className="text-xs text-green-600 mt-1 break-words">
                   Time In
+                  {record.timeInImage.status === "pending" && " (Uploading...)"}
+                  {record.timeInImage.status === "failed" && " (Failed)"}
                 </div>
               </div>
             )}
             {record.timeOutImage && (
               <div className="text-center flex-shrink-0">
-                <Image
-                  src={record.timeOutImage.thumbnail}
-                  alt="Time Out Photo"
-                  width={48}
-                  height={48}
-                  className="rounded-lg object-cover cursor-pointer border-2 border-red-200 mx-auto"
-                  onClick={() =>
-                    window.open(record.timeOutImage!.url, "_blank")
-                  }
-                  title="Click to view Time Out photo"
-                />
+                {record.timeOutImage.status === "pending" ? (
+                  <div className="w-12 h-12 rounded-lg border-2 border-red-200 flex items-center justify-center bg-red-50 mx-auto">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                  </div>
+                ) : record.timeOutImage.status === "failed" ? (
+                  <div
+                    className="w-12 h-12 rounded-lg border-2 border-red-200 flex items-center justify-center bg-red-50 mx-auto"
+                    title="Upload failed"
+                  >
+                    <span className="text-red-600 text-xs">✗</span>
+                  </div>
+                ) : record.timeOutImage.thumbnail ? (
+                  <Image
+                    src={record.timeOutImage.thumbnail}
+                    alt="Time Out Photo"
+                    width={48}
+                    height={48}
+                    className="rounded-lg object-cover cursor-pointer border-2 border-red-200 mx-auto"
+                    onClick={() =>
+                      window.open(record.timeOutImage!.url, "_blank")
+                    }
+                    title="Click to view Time Out photo"
+                  />
+                ) : null}
                 <div className="text-xs text-red-600 mt-1 break-words">
                   Time Out
+                  {record.timeOutImage.status === "pending" &&
+                    " (Uploading...)"}
+                  {record.timeOutImage.status === "failed" && " (Failed)"}
                 </div>
               </div>
             )}
@@ -467,6 +566,27 @@ export default function Attendance() {
                 }`}
               >
                 {message}
+              </div>
+            </div>
+          )}
+
+          {/* Upload Status Messages */}
+          {uploadStatus && (
+            <div className="px-4 sm:px-6 pt-4">
+              <div
+                className={`p-3 rounded-lg border flex items-center space-x-2 ${
+                  uploadStatus.includes("failed") ||
+                  uploadStatus.includes("Failed")
+                    ? "bg-red-50 border-red-200 text-red-800"
+                    : uploadStatus.includes("completed")
+                    ? "bg-green-50 border-green-200 text-green-800"
+                    : "bg-blue-50 border-blue-200 text-blue-800"
+                }`}
+              >
+                {uploadStatus.includes("Uploading") && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                )}
+                <span className="text-sm">{uploadStatus}</span>
               </div>
             </div>
           )}
@@ -568,35 +688,90 @@ export default function Attendance() {
                           <div className="flex gap-3">
                             {rec.timeInImage && (
                               <div className="text-center">
-                                <Image
-                                  src={rec.timeInImage.thumbnail}
-                                  alt="Time In Photo"
-                                  width={48}
-                                  height={48}
-                                  className="rounded-lg object-cover border-2 border-green-200 cursor-pointer"
-                                  onClick={() =>
-                                    window.open(rec.timeInImage!.url, "_blank")
-                                  }
-                                />
+                                {rec.timeInImage.status === "pending" ? (
+                                  <div className="w-12 h-12 rounded-lg border-2 border-green-200 flex items-center justify-center bg-green-50">
+                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-600"></div>
+                                  </div>
+                                ) : rec.timeInImage.status === "failed" ? (
+                                  <div
+                                    className="w-12 h-12 rounded-lg border-2 border-red-200 flex items-center justify-center bg-red-50"
+                                    title="Image upload failed"
+                                  >
+                                    <span className="text-red-600 text-xs">
+                                      ✗
+                                    </span>
+                                  </div>
+                                ) : rec.timeInImage.thumbnail ? (
+                                  <Image
+                                    src={rec.timeInImage.thumbnail}
+                                    alt="Time In Photo"
+                                    width={48}
+                                    height={48}
+                                    className="rounded-lg object-cover border-2 border-green-200 cursor-pointer"
+                                    onClick={() =>
+                                      window.open(
+                                        rec.timeInImage!.url,
+                                        "_blank"
+                                      )
+                                    }
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 rounded-lg border-2 border-gray-200 flex items-center justify-center bg-gray-50">
+                                    <span className="text-gray-400 text-xs">
+                                      📷
+                                    </span>
+                                  </div>
+                                )}
                                 <div className="text-xs text-green-600 mt-1">
                                   In
+                                  {rec.timeInImage.status === "pending" &&
+                                    " ⏳"}
+                                  {rec.timeInImage.status === "failed" && " ❌"}
                                 </div>
                               </div>
                             )}
                             {rec.timeOutImage && (
                               <div className="text-center">
-                                <Image
-                                  src={rec.timeOutImage.thumbnail}
-                                  alt="Time Out Photo"
-                                  width={48}
-                                  height={48}
-                                  className="rounded-lg object-cover border-2 border-red-200 cursor-pointer"
-                                  onClick={() =>
-                                    window.open(rec.timeOutImage!.url, "_blank")
-                                  }
-                                />
+                                {rec.timeOutImage.status === "pending" ? (
+                                  <div className="w-12 h-12 rounded-lg border-2 border-red-200 flex items-center justify-center bg-red-50">
+                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600"></div>
+                                  </div>
+                                ) : rec.timeOutImage.status === "failed" ? (
+                                  <div
+                                    className="w-12 h-12 rounded-lg border-2 border-red-200 flex items-center justify-center bg-red-50"
+                                    title="Image upload failed"
+                                  >
+                                    <span className="text-red-600 text-xs">
+                                      ✗
+                                    </span>
+                                  </div>
+                                ) : rec.timeOutImage.thumbnail ? (
+                                  <Image
+                                    src={rec.timeOutImage.thumbnail}
+                                    alt="Time Out Photo"
+                                    width={48}
+                                    height={48}
+                                    className="rounded-lg object-cover border-2 border-red-200 cursor-pointer"
+                                    onClick={() =>
+                                      window.open(
+                                        rec.timeOutImage!.url,
+                                        "_blank"
+                                      )
+                                    }
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 rounded-lg border-2 border-gray-200 flex items-center justify-center bg-gray-50">
+                                    <span className="text-gray-400 text-xs">
+                                      📷
+                                    </span>
+                                  </div>
+                                )}
                                 <div className="text-xs text-red-600 mt-1">
                                   Out
+                                  {rec.timeOutImage.status === "pending" &&
+                                    " ⏳"}
+                                  {rec.timeOutImage.status === "failed" &&
+                                    " ❌"}
                                 </div>
                               </div>
                             )}

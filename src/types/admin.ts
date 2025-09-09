@@ -7,10 +7,18 @@ export interface AttendanceRecord {
   timeInImage?: {
     url: string;
     thumbnail: string;
+    public_id?: string;
+    status?: "pending" | "processing" | "completed" | "failed";
+    uploadJobId?: string;
+    error?: string;
   };
   timeOutImage?: {
     url: string;
     thumbnail: string;
+    public_id?: string;
+    status?: "pending" | "processing" | "completed" | "failed";
+    uploadJobId?: string;
+    error?: string;
   };
   createdAt: string;
   updatedAt: string;

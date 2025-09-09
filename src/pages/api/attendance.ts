@@ -2,7 +2,8 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { Session } from "next-auth";
 import clientPromise from "@/lib/mongodb";
 import {
-  uploadImage,
+  queueImageUpload,
+  generateJobId,
   getSignedImageUrl,
   getSignedThumbnailUrl,
 } from "@/lib/cloudinary";
@@ -83,15 +84,20 @@ async function handler(
       const currentPHTTimeString = getPHTTimeString();
 
       let imageData = null;
+      let uploadJobId = null;
+
       if (image) {
-        const uploadResult = await uploadImage(
-          image,
-          `attendance/${session.user.name}`
-        );
+        // Use asynchronous upload to prevent Vercel timeouts
+        uploadJobId = generateJobId();
+        queueImageUpload(uploadJobId, image, `attendance/${session.user.name}`);
+
+        // Store job ID temporarily - the actual image URLs will be updated once upload completes
         imageData = {
-          url: uploadResult.url,
-          thumbnail: uploadResult.thumbnail,
-          public_id: uploadResult.public_id,
+          uploadJobId,
+          url: null, // Will be updated once upload completes
+          thumbnail: null, // Will be updated once upload completes
+          public_id: null, // Will be updated once upload completes
+          status: "pending",
         };
       }
 
