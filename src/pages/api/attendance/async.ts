@@ -50,6 +50,7 @@ async function handler(
       const newRecord = {
         userId: session.user.id,
         userName: session.user.name,
+        userEmail: session.user.email,
         date: today,
         timeIn: currentPHTTimeString,
         timeOut: null,

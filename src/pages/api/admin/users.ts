@@ -27,47 +27,57 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .toArray();
 
     // Create a map of user emails to the latest attendance record for today
+    // Handle both userEmail (new format) and fallback to matching by userName for older records
     const todayAttendanceMap = new Map();
+    const userNameToEmailMap = new Map();
+
+    // First, create a mapping of userNames to emails from the users collection
+    users.forEach((user) => {
+      userNameToEmailMap.set(user.name, user.email);
+    });
+
     attendanceRecords.forEach((record) => {
-      // Because records are sorted newest-first, only set if we haven't seen this user yet
-      if (!todayAttendanceMap.has(record.userEmail)) {
-        todayAttendanceMap.set(record.userEmail, {
-          timeIn: record.timeIn,
+      // Try to get email from record.userEmail, or fallback to mapping userName to email
+      const userEmail =
+        record.userEmail || userNameToEmailMap.get(record.userName);
+
+      if (userEmail && !todayAttendanceMap.has(userEmail)) {
+        todayAttendanceMap.set(userEmail, {
+          timeIn: record.timeIn || null,
           timeOut: record.timeOut || null,
         });
       }
     });
 
-    // Get the latest login time for each user from attendance records
-    const latestLogins = await db
+    // Get all attendance records to determine latest login times
+    const allAttendanceRecords = await db
       .collection("attendance")
-      .aggregate([
-        {
-          $group: {
-            _id: "$userEmail",
-            lastLoginTime: {
-              $max: {
-                $cond: {
-                  if: { $type: "$createdAt" },
-                  then: {
-                    $cond: {
-                      if: { $eq: [{ $type: "$createdAt" }, "date"] },
-                      then: "$createdAt",
-                      else: { $dateFromString: { dateString: "$createdAt" } },
-                    },
-                  },
-                  else: null,
-                },
-              },
-            },
-          },
-        },
-      ])
+      .find({})
+      .sort({ createdAt: -1 })
       .toArray();
 
-    const loginMap = new Map(
-      latestLogins.map((login) => [login._id, login.lastLoginTime])
-    );
+    // Create a map of user emails to their latest login time
+    const loginMap = new Map();
+    allAttendanceRecords.forEach((record) => {
+      // Try to get email from record.userEmail, or fallback to mapping userName to email
+      const userEmail =
+        record.userEmail || userNameToEmailMap.get(record.userName);
+
+      if (userEmail && !loginMap.has(userEmail)) {
+        // Convert createdAt to proper Date object
+        let loginTime = null;
+        if (record.createdAt) {
+          if (record.createdAt instanceof Date) {
+            loginTime = record.createdAt;
+          } else if (typeof record.createdAt === "string") {
+            loginTime = new Date(record.createdAt);
+          } else if (record.createdAt.$date) {
+            loginTime = new Date(record.createdAt.$date);
+          }
+        }
+        loginMap.set(userEmail, loginTime);
+      }
+    });
 
     // Format user data with login information
     const usersWithLoginStatus = users.map((user) => {

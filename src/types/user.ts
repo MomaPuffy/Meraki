@@ -20,8 +20,11 @@ export interface UserData {
   position?: string;
   color?: string;
   createdAt: string;
-  lastLoginToday?: boolean;
+  lastLogin?: boolean;
   lastLoginTime?: string;
+  lastLoginToday?: boolean;
+  timeIn?: string;
+  timeOut?: string;
   timeInToday?: string;
   timeOutToday?: string;
 }
