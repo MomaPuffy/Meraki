@@ -28,16 +28,25 @@ export default function UpcomingEvents() {
         const upcoming = events
           .map((event: CalendarEvent) => ({
             ...event,
-            date: new Date(event.date), // Ensure date is always a Date object
+            date: event.date, // Keep the original date string/object
           }))
           .filter((event: CalendarEvent) => {
-            const eventDate =
-              event.date instanceof Date ? event.date : new Date(event.date);
+            // Parse date without timezone conversion for consistent comparison
+            const dateStr =
+              event.date instanceof Date
+                ? event.date.toISOString()
+                : event.date;
+            const eventDate = new Date(dateStr.replace("Z", ""));
             return eventDate >= now;
           })
           .sort((a: CalendarEvent, b: CalendarEvent) => {
-            const aDate = a.date instanceof Date ? a.date : new Date(a.date);
-            const bDate = b.date instanceof Date ? b.date : new Date(b.date);
+            // Parse dates without timezone conversion for consistent sorting
+            const aDateStr =
+              a.date instanceof Date ? a.date.toISOString() : a.date;
+            const bDateStr =
+              b.date instanceof Date ? b.date.toISOString() : b.date;
+            const aDate = new Date(aDateStr.replace("Z", ""));
+            const bDate = new Date(bDateStr.replace("Z", ""));
             return aDate.getTime() - bDate.getTime();
           })
           .slice(0, 3); // Show only next 3 events
@@ -55,7 +64,9 @@ export default function UpcomingEvents() {
   }, []);
 
   const formatEventDate = (date: Date | string) => {
-    const dateObj = date instanceof Date ? date : new Date(date);
+    // Parse the date without timezone conversion to show exactly what's in the database
+    const dateStr = date instanceof Date ? date.toISOString() : date;
+    const dateObj = new Date(dateStr.replace("Z", "")); // Remove Z to treat as local time
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
@@ -73,7 +84,9 @@ export default function UpcomingEvents() {
   };
 
   const formatEventTime = (date: Date | string) => {
-    const dateObj = date instanceof Date ? date : new Date(date);
+    // Parse the date without timezone conversion to show exactly what's in the database
+    const dateStr = date instanceof Date ? date.toISOString() : date;
+    const dateObj = new Date(dateStr.replace("Z", "")); // Remove Z to treat as local time
     return dateObj.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
