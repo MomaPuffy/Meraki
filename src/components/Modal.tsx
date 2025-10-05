@@ -7,6 +7,7 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   maxWidth?: string;
+  headerColorClass?: string;
 }
 
 export default function Modal({
@@ -15,6 +16,7 @@ export default function Modal({
   title,
   children,
   maxWidth = "max-w-2xl",
+  headerColorClass = "bg-gradient-to-r from-purple-600 to-purple-700",
 }: ModalProps) {
   if (!isOpen) return null;
 
@@ -23,7 +25,9 @@ export default function Modal({
       <div
         className={`bg-white rounded-lg shadow-xl ${maxWidth} w-full max-h-[90vh] overflow-hidden`}
       >
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-purple-600 to-purple-700">
+        <div
+          className={`flex items-center justify-between p-6 border-b border-gray-200 ${headerColorClass}`}
+        >
           <h2 className="text-xl font-semibold text-white">{title}</h2>
           <button
             onClick={onClose}

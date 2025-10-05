@@ -5,9 +5,11 @@ import { getUserColorTheme } from "@/lib/colorConfig";
 import { formatTimeForDisplay, formatDateForDisplay } from "@/utils/dateUtils";
 import { UserData, UserAttendanceModalData, AttendanceRecord } from "@/types";
 import { isAdminPosition } from "@/utils/adminRoles";
-import { IoClose } from "react-icons/io5";
 import DataTable, { Column, FilterOption } from "@/components/DataTable";
-import AttendancePhotoViewer from "@/components/ImageViewers/AttendancePhotoViewer";
+import UnifiedImageViewer, {
+  createAttendanceViewerProps,
+} from "@/components/ImageViewer";
+import Modal from "@/components/Modal";
 
 export default function Admin() {
   const { data: session, status } = useSession();
@@ -802,87 +804,93 @@ export default function Admin() {
       </div>
 
       {/* User Attendance Modal */}
-      {showModal && (
-        <div className="fixed inset-0 backdrop-blur-xs bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div
-              className={`flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r ${selectedUserColors.headerFrom} ${selectedUserColors.headerTo}`}
-            >
-              <h2 className="text-xl font-semibold text-white">
-                {selectedUser
-                  ? `${selectedUser.user.name}'s Attendance Log`
-                  : "Loading..."}
-              </h2>
-              <button
-                onClick={closeModal}
-                className="text-white hover:text-gray-200 text-2xl font-bold"
-              >
-                <IoClose />
-              </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-              {modalLoading ? (
-                <div className="flex justify-center items-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <span className="ml-2 text-gray-600">
-                    Loading attendance records...
-                  </span>
-                </div>
-              ) : selectedUser ? (
-                <>
-                  {/* User Info */}
-                  <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-gray-500">Name</p>
-                        <p className="font-medium">{selectedUser.user.name}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Email</p>
-                        <p className="font-medium">{selectedUser.user.email}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Department</p>
-                        <p className="font-medium">
-                          {selectedUser.user.department || "Unassigned"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Position</p>
-                        <p className="font-medium">
-                          {selectedUser.user.position || "Member"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Attendance Records DataTable */}
-                  <div className="p-6">
-                    <DataTable
-                      data={selectedUser.attendance}
-                      columns={attendanceColumns}
-                      renderMobileCard={renderAttendanceMobileCard}
-                      searchable
-                      searchPlaceholder="Search by date (e.g., 'July 31, 2025' or '2025-07-31')..."
-                      emptyMessage="No attendance records found for this user."
-                      defaultItemsPerPage={10}
-                      itemsPerPageOptions={[5, 10, 25, 50]}
-                    />
-                  </div>
-                </>
-              ) : null}
-            </div>
+      <Modal
+        isOpen={showModal}
+        onClose={closeModal}
+        title={
+          selectedUser
+            ? `${selectedUser.user.name}'s Attendance Log`
+            : "Loading..."
+        }
+        maxWidth="max-w-4xl"
+        headerColorClass={`bg-gradient-to-r ${selectedUserColors.headerFrom} ${selectedUserColors.headerTo}`}
+      >
+        {modalLoading ? (
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-2 text-gray-600">
+              Loading attendance records...
+            </span>
           </div>
-        </div>
-      )}
+        ) : selectedUser ? (
+          <>
+            {/* User Info */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Name</p>
+                  <p className="font-medium">{selectedUser.user.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Email</p>
+                  <p className="font-medium">{selectedUser.user.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Department</p>
+                  <p className="font-medium">
+                    {selectedUser.user.department || "Unassigned"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Position</p>
+                  <p className="font-medium">
+                    {selectedUser.user.position || "Member"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Attendance Records DataTable */}
+            <div className="p-6">
+              <DataTable
+                data={selectedUser.attendance}
+                columns={attendanceColumns}
+                renderMobileCard={renderAttendanceMobileCard}
+                searchable
+                searchPlaceholder="Search by date (e.g., 'July 31, 2025' or '2025-07-31')..."
+                emptyMessage="No attendance records found for this user."
+                defaultItemsPerPage={10}
+                itemsPerPageOptions={[5, 10, 25, 50]}
+              />
+            </div>
+          </>
+        ) : null}
+      </Modal>
 
       {/* Attendance Photo Viewer */}
-      <AttendancePhotoViewer
-        isOpen={showPhotoViewer}
-        onClose={() => setShowPhotoViewer(false)}
-        photo={selectedPhoto}
-      />
+      {selectedPhoto && (
+        <UnifiedImageViewer
+          {...createAttendanceViewerProps(
+            {
+              isOpen: showPhotoViewer,
+              onClose: () => setShowPhotoViewer(false),
+              imageUrl: selectedPhoto.url,
+              imageAlt:
+                selectedPhoto.type === "timeIn"
+                  ? "Time In Photo"
+                  : "Time Out Photo",
+              title:
+                selectedPhoto.type === "timeIn"
+                  ? "Time In Photo"
+                  : "Time Out Photo",
+              subtitle: [selectedPhoto.userName, selectedPhoto.timestamp]
+                .filter(Boolean)
+                .join(" • "),
+            },
+            selectedPhoto
+          )}
+        />
+      )}
     </>
   );
 }

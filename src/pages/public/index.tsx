@@ -6,7 +6,9 @@ import Link from "next/link";
 import UpcomingEvents from "@/app/components/calendar/UpcomingEvents";
 import { useAuth } from "@/hooks/useAuth";
 import Modal from "@/components/Modal";
-import ImageViewer from "@/components/ImageViewers/ImageViewer";
+import UnifiedImageViewer, {
+  createGalleryViewerProps,
+} from "@/components/ImageViewer";
 import { IoClose } from "react-icons/io5";
 
 // gallery comes from the API
@@ -591,25 +593,27 @@ export default function Home() {
       </Modal>
 
       {/* Image Viewer Modal */}
-      <ImageViewer
-        isOpen={showImageViewer}
-        onClose={() => setShowImageViewer(false)}
-        item={selectedImage}
-        isLiked={
-          selectedImage
-            ? (selectedImage.likedBy || []).includes(user?.id || "")
-            : false
-        }
-        onLike={handleImageLike}
-        isAuthenticated={isAuthenticated}
-        isAdmin={isAdmin}
-        onDelete={handleDelete}
-        isDeleting={
-          selectedImage
-            ? deletingId === (selectedImage._id || selectedImage.id)
-            : false
-        }
-      />
+      {selectedImage && (
+        <UnifiedImageViewer
+          {...createGalleryViewerProps(
+            {
+              isOpen: showImageViewer,
+              onClose: () => setShowImageViewer(false),
+              imageUrl: selectedImage.src,
+              imageAlt: selectedImage.title,
+              title: selectedImage.title,
+              subtitle: selectedImage.category,
+            },
+            selectedImage,
+            (selectedImage.likedBy || []).includes(user?.id || ""),
+            handleImageLike,
+            isAuthenticated,
+            isAdmin,
+            handleDelete,
+            deletingId === (selectedImage._id || selectedImage.id)
+          )}
+        />
+      )}
     </main>
   );
 }

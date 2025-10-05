@@ -4,12 +4,17 @@ import React, { useEffect, useState } from "react";
 import { useCalendar } from "@/contexts/CalendarContext";
 import Link from "next/link";
 import { CalendarEvent } from "@/types/event";
+import Modal from "@/components/Modal";
 
 export default function UpcomingEvents() {
   const { canEdit } = useCalendar();
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
+    null
+  );
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const loadEvents = async () => {
@@ -93,6 +98,42 @@ export default function UpcomingEvents() {
     });
   };
 
+  const getCategoryModalHeader = (category: string) => {
+    switch (category) {
+      case "meeting":
+        return "bg-gradient-to-r from-blue-600 to-blue-700";
+      case "deadline":
+        return "bg-gradient-to-r from-red-600 to-red-700";
+      case "personal":
+        return "bg-gradient-to-r from-green-600 to-green-700";
+      default:
+        return "bg-gradient-to-r from-gray-600 to-gray-700";
+    }
+  };
+
+  const getCategoryBadge = (category: string) => {
+    switch (category) {
+      case "meeting":
+        return "bg-blue-100 text-blue-800";
+      case "deadline":
+        return "bg-red-100 text-red-800";
+      case "personal":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const handleEventClick = (event: CalendarEvent) => {
+    setSelectedEvent(event);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedEvent(null);
+  };
+
   if (loading) {
     return (
       <div className="space-y-2">
@@ -146,41 +187,121 @@ export default function UpcomingEvents() {
   }
 
   return (
-    <div className="space-y-2">
-      {upcomingEvents.map((event) => (
-        <div
-          key={event.id}
-          className="w-full text-left p-2 hover:bg-gray-100 rounded border-l-2 border-blue-500"
+    <>
+      <div className="space-y-2">
+        {upcomingEvents.map((event) => (
+          <div
+            key={event.id}
+            onClick={() => handleEventClick(event)}
+            className="w-full text-left p-2 hover:bg-gray-100 rounded border-l-2 border-blue-500 cursor-pointer transition-colors"
+          >
+            <div className="flex justify-between items-start">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm truncate">{event.title}</p>
+                <p className="text-xs text-gray-500">
+                  {formatEventDate(event.date)} at {formatEventTime(event.date)}
+                </p>
+              </div>
+              <span
+                className={`text-xs px-2 py-1 rounded ml-2 flex-shrink-0 ${
+                  event.category === "meeting"
+                    ? "bg-blue-100 text-blue-800"
+                    : event.category === "deadline"
+                    ? "bg-red-100 text-red-800"
+                    : event.category === "personal"
+                    ? "bg-green-100 text-green-800"
+                    : "bg-gray-100 text-gray-800"
+                }`}
+              >
+                {event.category}
+              </span>
+            </div>
+          </div>
+        ))}
+        <Link
+          href="/calendar"
+          className="w-full text-left p-2 hover:bg-gray-100 rounded block text-blue-600 text-sm"
         >
-          <div className="flex justify-between items-start">
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">{event.title}</p>
-              <p className="text-xs text-gray-500">
-                {formatEventDate(event.date)} at {formatEventTime(event.date)}
+          {canEdit ? "Manage events →" : "View all events →"}
+        </Link>
+      </div>
+
+      {/* Event Details Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        title={selectedEvent?.title || "Event Details"}
+        maxWidth="max-w-lg"
+        headerColorClass={getCategoryModalHeader(
+          selectedEvent?.category || "other"
+        )}
+      >
+        {selectedEvent && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-1">Date & Time</h3>
+              <p className="text-gray-700">
+                {formatEventDate(selectedEvent.date)} at{" "}
+                {formatEventTime(selectedEvent.date)}
               </p>
             </div>
-            <span
-              className={`text-xs px-2 py-1 rounded ml-2 flex-shrink-0 ${
-                event.category === "meeting"
-                  ? "bg-blue-100 text-blue-800"
-                  : event.category === "deadline"
-                  ? "bg-red-100 text-red-800"
-                  : event.category === "personal"
-                  ? "bg-green-100 text-green-800"
-                  : "bg-gray-100 text-gray-800"
-              }`}
-            >
-              {event.category}
-            </span>
+
+            {selectedEvent.location && (
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">Location</h3>
+                <p className="text-gray-700">{selectedEvent.location}</p>
+              </div>
+            )}
+
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-1">Category</h3>
+              <span
+                className={`inline-block text-xs px-2 py-1 rounded ${getCategoryBadge(
+                  selectedEvent.category || "other"
+                )}`}
+              >
+                {selectedEvent.category
+                  ? selectedEvent.category.charAt(0).toUpperCase() +
+                    selectedEvent.category.slice(1)
+                  : "Other"}
+              </span>
+            </div>
+
+            {selectedEvent.duration && (
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">Duration</h3>
+                <p className="text-gray-700">
+                  {selectedEvent.duration >= 60
+                    ? `${Math.floor(selectedEvent.duration / 60)}h ${
+                        selectedEvent.duration % 60
+                      }m`
+                    : `${selectedEvent.duration}m`}
+                </p>
+              </div>
+            )}
+
+            {selectedEvent.description && (
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">
+                  Description
+                </h3>
+                <p className="text-gray-700 whitespace-pre-wrap break-words">
+                  {selectedEvent.description}
+                </p>
+              </div>
+            )}
+
+            {!selectedEvent.description && (
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">
+                  Description
+                </h3>
+                <p className="text-gray-500 italic">No description provided</p>
+              </div>
+            )}
           </div>
-        </div>
-      ))}
-      <Link
-        href="/calendar"
-        className="w-full text-left p-2 hover:bg-gray-100 rounded block text-blue-600 text-sm"
-      >
-        {canEdit ? "Manage events →" : "View all events →"}
-      </Link>
-    </div>
+        )}
+      </Modal>
+    </>
   );
 }
