@@ -1,0 +1,21 @@
+{
+  "name": "Meraki",
+  "short_name": "Meraki",
+  "description": "A simple club management application",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/meraki.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/meraki.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
