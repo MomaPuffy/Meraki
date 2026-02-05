@@ -30,7 +30,7 @@ export default function Attendance() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [actionType, setActionType] = useState<"time-in" | "time-out" | null>(
-    null
+    null,
   );
   const [uploadStatus, setUploadStatus] = useState<string>("");
 
@@ -91,8 +91,8 @@ export default function Attendance() {
           ? (data.records as AttendanceRecord[])
               .slice()
               .sort((a: AttendanceRecord, b: AttendanceRecord) => {
-                const ta = a.createdAt || a.date || "";
-                const tb = b.createdAt || b.date || "";
+                const ta = String(a.createdAt || a.date || "");
+                const tb = String(b.createdAt || b.date || "");
                 return tb.localeCompare(ta);
               })
           : [];
@@ -166,7 +166,7 @@ export default function Attendance() {
 
   const submitAttendance = async (
     type: "time-in" | "time-out",
-    image?: string
+    image?: string,
   ) => {
     setActionLoading(true);
     setUploadStatus("");
@@ -222,8 +222,8 @@ export default function Attendance() {
       .filter((record) => record.date === today)
       .slice()
       .sort((a, b) => {
-        const ta = a.createdAt || a.date || "";
-        const tb = b.createdAt || b.date || "";
+        const ta = String(a.createdAt || a.date || "");
+        const tb = String(b.createdAt || b.date || "");
         return tb.localeCompare(ta);
       });
   };
@@ -275,7 +275,7 @@ export default function Attendance() {
 
   const userColors = getUserColorTheme(
     userProfile?.position,
-    userProfile?.department
+    userProfile?.department,
   );
 
   // Define attendance table columns
@@ -283,7 +283,7 @@ export default function Attendance() {
     {
       key: "date",
       header: "Date",
-      render: (record) => formatDate(record.date),
+      render: (record) => formatDate(record.date || ""),
     },
     {
       key: "timeIn",
@@ -378,15 +378,15 @@ export default function Attendance() {
             record.timeOut
               ? "bg-green-100 text-green-800"
               : record.timeIn
-              ? "bg-yellow-100 text-yellow-800"
-              : "bg-gray-100 text-gray-800"
+                ? "bg-yellow-100 text-yellow-800"
+                : "bg-gray-100 text-gray-800"
           }`}
         >
           {record.timeOut
             ? "Complete"
             : record.timeIn
-            ? "In Progress"
-            : "Incomplete"}
+              ? "In Progress"
+              : "Incomplete"}
         </span>
       ),
     },
@@ -398,22 +398,22 @@ export default function Attendance() {
       {/* Date Header */}
       <div className="flex items-center justify-between mb-3 gap-2">
         <div className="text-sm font-medium text-gray-900 break-words flex-1">
-          {formatDate(record.date)}
+          {formatDate(record.date || "")}
         </div>
         <span
           className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full flex-shrink-0 ${
             record.timeOut
               ? "bg-green-100 text-green-800"
               : record.timeIn
-              ? "bg-yellow-100 text-yellow-800"
-              : "bg-gray-100 text-gray-800"
+                ? "bg-yellow-100 text-yellow-800"
+                : "bg-gray-100 text-gray-800"
           }`}
         >
           {record.timeOut
             ? "Complete"
             : record.timeIn
-            ? "In Progress"
-            : "Incomplete"}
+              ? "In Progress"
+              : "Incomplete"}
         </span>
       </div>
 
@@ -579,8 +579,8 @@ export default function Attendance() {
                   uploadStatus.includes("Failed")
                     ? "bg-red-50 border-red-200 text-red-800"
                     : uploadStatus.includes("completed")
-                    ? "bg-green-50 border-green-200 text-green-800"
-                    : "bg-blue-50 border-blue-200 text-blue-800"
+                      ? "bg-green-50 border-green-200 text-green-800"
+                      : "bg-blue-50 border-blue-200 text-blue-800"
                 }`}
               >
                 {uploadStatus.includes("Uploading") && (
@@ -680,8 +680,8 @@ export default function Attendance() {
                             {rec.timeOut
                               ? "Complete"
                               : rec.timeIn
-                              ? "In Progress"
-                              : "Incomplete"}
+                                ? "In Progress"
+                                : "Incomplete"}
                           </div>
                         </div>
                         {(rec.timeInImage || rec.timeOutImage) && (
@@ -711,7 +711,7 @@ export default function Attendance() {
                                     onClick={() =>
                                       window.open(
                                         rec.timeInImage!.url,
-                                        "_blank"
+                                        "_blank",
                                       )
                                     }
                                   />
@@ -755,7 +755,7 @@ export default function Attendance() {
                                     onClick={() =>
                                       window.open(
                                         rec.timeOutImage!.url,
-                                        "_blank"
+                                        "_blank",
                                       )
                                     }
                                   />

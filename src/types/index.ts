@@ -11,8 +11,5 @@ export * from "./calendar";
 // Chat-related types
 export * from "./chat";
 
-// Admin and Attendance-related types
-export * from "./admin";
-
 // Theme-related types
 export * from "./theme";

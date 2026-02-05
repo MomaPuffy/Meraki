@@ -46,9 +46,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     attendanceRecords.forEach((record) => {
       // Try to get email from record.userEmail, or fallback to mapping userName to email
       const userEmail =
-        record.userEmail || userNameToEmailMap.get(record.userName || "");
+        typeof record.userEmail === "string"
+          ? record.userEmail
+          : typeof record.userName === "string"
+          ? userNameToEmailMap.get(record.userName)
+          : undefined;
 
-      if (userEmail && !todayAttendanceMap.has(userEmail)) {
+      if (typeof userEmail === "string" && userEmail && !todayAttendanceMap.has(userEmail)) {
         todayAttendanceMap.set(userEmail, {
           timeIn: record.timeIn || null,
           timeOut: record.timeOut || null,
@@ -64,22 +68,31 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .toArray();
 
     // Create a map of user emails to their latest login time
-    const loginMap = new Map<string, Date | null>();
+    const loginMap = new Map<string, string | null>();
     allAttendanceRecords.forEach((record) => {
       // Try to get email from record.userEmail, or fallback to mapping userName to email
       const userEmail =
-        record.userEmail || userNameToEmailMap.get(record.userName || "");
+        typeof record.userEmail === "string"
+          ? record.userEmail
+          : typeof record.userName === "string"
+          ? userNameToEmailMap.get(record.userName)
+          : undefined;
 
-      if (userEmail && !loginMap.has(userEmail)) {
+      if (typeof userEmail === "string" && userEmail && !loginMap.has(userEmail)) {
         // Convert createdAt to proper Date object
-        let loginTime = null;
+        let loginTime: string | null = null;
         if (record.createdAt) {
-          if (record.createdAt instanceof Date) {
+          if (record.createdAt) {
             loginTime = record.createdAt;
           } else if (typeof record.createdAt === "string") {
-            loginTime = new Date(record.createdAt);
-          } else if (record.createdAt.$date) {
-            loginTime = new Date(record.createdAt.$date);
+            loginTime = new Date(record.createdAt).toISOString();
+          } else if (
+            typeof record.createdAt === "object" &&
+            record.createdAt !== null &&
+            "$date" in record.createdAt &&
+            typeof (record.createdAt as { $date: string }).$date === "string"
+          ) {
+            loginTime = new Date((record.createdAt as { $date: string }).$date).toISOString();
           }
         }
         loginMap.set(userEmail, loginTime);
@@ -101,7 +114,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         color: user.color || "blue",
         createdAt: user.createdAt,
         lastLoginToday: todayAttendanceMap.has(user.email),
-        lastLoginTime: lastLogin ? lastLogin.toISOString() : undefined,
+        lastLoginTime: lastLogin ?? undefined,
         timeInToday: todayAttendance?.timeIn ?? undefined,
         timeOutToday: todayAttendance?.timeOut ?? undefined,
       };

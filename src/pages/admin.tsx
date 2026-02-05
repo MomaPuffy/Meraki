@@ -126,7 +126,7 @@ export default function Admin() {
 
     try {
       const response = await fetch(
-        `/api/admin/user-attendance?userId=${user.id}`
+        `/api/admin/user-attendance?userId=${user.id}`,
       );
       const data = await response.json();
 
@@ -136,8 +136,17 @@ export default function Admin() {
           data.attendance = (data.attendance as AttendanceRecord[])
             .slice()
             .sort((a, b) => {
-              const ta = a.createdAt || a.date || "";
-              const tb = b.createdAt || b.date || "";
+              const getComparableString = (
+                val: string | Date | { $date: string } | undefined,
+              ): string => {
+                if (!val) return "";
+                if (typeof val === "string") return val;
+                if (val instanceof Date) return val.toISOString();
+                if (typeof val === "object" && "$date" in val) return val.$date;
+                return "";
+              };
+              const ta = getComparableString(a.createdAt || a.date);
+              const tb = getComparableString(b.createdAt || b.date);
               return tb.localeCompare(ta);
             });
         }
@@ -161,18 +170,18 @@ export default function Admin() {
   };
 
   const handlePhotoClick = (
-    imageData: { url: string; thumbnail: string },
+    imageData: { url?: string; fullSize?: string; thumbnail: string },
     type: "timeIn" | "timeOut",
     record?: AttendanceRecord,
-    userName?: string
+    userName?: string,
   ) => {
     setSelectedPhoto({
-      url: imageData.url,
+      url: imageData.url || imageData.fullSize || "",
       thumbnail: imageData.thumbnail,
       type,
       timestamp: record
-        ? `${formatDateForDisplay(record.date)} at ${formatTimeForDisplay(
-            record[type] as string
+        ? `${formatDateForDisplay(record.date ?? "")} at ${formatTimeForDisplay(
+            record[type] as string,
           )}`
         : undefined,
       userName: userName || selectedUser?.user.name,
@@ -195,7 +204,7 @@ export default function Admin() {
     {
       key: "date",
       header: "Date",
-      render: (record) => formatDate(record.date),
+      render: (record) => formatDate(record.date ?? ""),
     },
     {
       key: "timeIn",
@@ -258,15 +267,15 @@ export default function Admin() {
             record.timeOut
               ? "bg-green-100 text-green-800"
               : record.timeIn
-              ? "bg-yellow-100 text-yellow-800"
-              : "bg-gray-100 text-gray-800"
+                ? "bg-yellow-100 text-yellow-800"
+                : "bg-gray-100 text-gray-800"
           }`}
         >
           {record.timeOut
             ? "Complete"
             : record.timeIn
-            ? "In Progress"
-            : "Incomplete"}
+              ? "In Progress"
+              : "Incomplete"}
         </span>
       ),
     },
@@ -278,22 +287,22 @@ export default function Admin() {
       {/* Date Header */}
       <div className="flex items-center justify-between mb-3 gap-2">
         <div className="text-sm font-medium text-gray-900 break-words flex-1">
-          {formatDate(record.date)}
+          {formatDate(record.date ?? "")}
         </div>
         <span
           className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full flex-shrink-0 ${
             record.timeOut
               ? "bg-green-100 text-green-800"
               : record.timeIn
-              ? "bg-yellow-100 text-yellow-800"
-              : "bg-gray-100 text-gray-800"
+                ? "bg-yellow-100 text-yellow-800"
+                : "bg-gray-100 text-gray-800"
           }`}
         >
           {record.timeOut
             ? "Complete"
             : record.timeIn
-            ? "In Progress"
-            : "Incomplete"}
+              ? "In Progress"
+              : "Incomplete"}
         </span>
       </div>
 
@@ -372,7 +381,7 @@ export default function Admin() {
   const totalUsers = users.length;
   const loggedInToday = users.filter((user) => user.lastLoginToday).length;
   const adminUsers = users.filter((user) =>
-    isAdminPosition(user.position)
+    isAdminPosition(user.position),
   ).length;
 
   // Define filters using computedFilters approach
@@ -534,7 +543,7 @@ export default function Admin() {
       header: "Last Login",
       centered: true,
       render: (user) =>
-        user.lastLoginTime ? formatDate(user.lastLoginTime) : "Never",
+        user.lastLoginTime ? formatDate(user.lastLoginTime ?? "") : "Never",
     },
     {
       key: "actions",
@@ -613,7 +622,9 @@ export default function Admin() {
           <div className="space-y-1">
             <div className="text-xs text-gray-500 mb-1">Last Login</div>
             <div className="text-sm text-gray-900 break-words">
-              {user.lastLoginTime ? formatDate(user.lastLoginTime) : "Never"}
+              {user.lastLoginTime
+                ? formatDate(user.lastLoginTime ?? "")
+                : "Never"}
             </div>
           </div>
         </div>
@@ -692,12 +703,12 @@ export default function Admin() {
 
   const userColors = getUserColorTheme(
     currentUser?.position,
-    currentUser?.department
+    currentUser?.department,
   );
 
   const selectedUserColors = getUserColorTheme(
     selectedUser?.user.position,
-    selectedUser?.user.department
+    selectedUser?.user.department,
   );
 
   return (
@@ -854,7 +865,11 @@ export default function Admin() {
             <div className="p-6">
               <DataTable
                 data={selectedUser.attendance}
-                columns={attendanceColumns}
+                columns={
+                  attendanceColumns as unknown as Column<
+                    (typeof selectedUser.attendance)[0]
+                  >[]
+                }
                 renderMobileCard={renderAttendanceMobileCard}
                 searchable
                 searchPlaceholder="Search by date (e.g., 'July 31, 2025' or '2025-07-31')..."
@@ -887,7 +902,7 @@ export default function Admin() {
                 .filter(Boolean)
                 .join(" • "),
             },
-            selectedPhoto
+            selectedPhoto,
           )}
         />
       )}
