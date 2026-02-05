@@ -7,6 +7,7 @@ export const ADMIN_POSITIONS = [
 
 export type AdminPosition = (typeof ADMIN_POSITIONS)[number];
 
-export const isAdminPosition = (position?: string): boolean => {
-  return ADMIN_POSITIONS.includes(position?.toLowerCase() as AdminPosition);
+export function isAdminPosition(position?: string): position is AdminPosition {
+  if (!position) return false;
+  return ADMIN_POSITIONS.includes(position.toLowerCase() as AdminPosition);
 };

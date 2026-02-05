@@ -92,16 +92,14 @@ export default function Navbar() {
               Chat
             </Link>
           </li>
-          {isAdmin && (
-            <li>
-              <Link
-                href="/admin"
-                className="hover:border-b-white hover:border-b-1 px-2 py-1"
-              >
-                Admin
-              </Link>
-            </li>
-          )}
+          <li>
+            <Link
+              href="/admin"
+              className="hover:border-b-white hover:border-b-1 px-2 py-1"
+            >
+              Admin
+            </Link>
+          </li>
           <li>
             <Link
               href="https://docs.google.com/spreadsheets/d/1BLdK3ry7XJymGRWiVIefZ1kdpxpWy-2XajthgD9ItPg"

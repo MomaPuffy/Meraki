@@ -2,13 +2,9 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import clientPromise from "@/lib/mongodb";
 import { getPHTDateString } from "@/utils/dateUtils";
 import { withAdminAuth } from "@/utils/withAuth";
-import { authorize } from "@/lib/auth/authorize";
 import { AttendanceRecord, UserData, UserProfile } from "@/types/user";
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await authorize(req, res, { roles: ["admin"] });
-  if (!session) return res.status(401).json({ message: "Unauthorized" }); // Authorization failed, response already sent
-
   if (req.method !== "GET") {
     return res.status(405).json({ message: "Method not allowed" });
   }

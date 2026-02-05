@@ -1,12 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
+import { withAdminAuth } from "@/utils/withAuth";
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
@@ -21,34 +20,8 @@ export default async function handler(
   }
 
   try {
-    const session = await getServerSession(req, res, authOptions);
-
-    if (!session || !session.user?.email) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-
     const client = await clientPromise;
     const db = client.db("meraki");
-
-    // Check admin privileges
-    const currentUser = await db.collection("users").findOne({
-      email: session.user.email,
-    });
-
-    if (!currentUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const adminPositions = ["advisor", "president", "vice-president"];
-    const isAdmin = adminPositions.includes(
-      currentUser.position?.toLowerCase() || ""
-    );
-
-    if (!isAdmin) {
-      return res
-        .status(403)
-        .json({ message: "Access denied. Admin privileges required." });
-    }
 
     // Find target user
     const targetUser = await db.collection("users").findOne({
@@ -106,3 +79,5 @@ export default async function handler(
     res.status(500).json({ message: "Internal server error" });
   }
 }
+
+export default withAdminAuth(handler);

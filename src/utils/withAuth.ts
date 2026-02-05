@@ -6,8 +6,8 @@ import { isAdminPosition } from "./adminRoles";
 export type SessionUser = { id?: string; position?: string };
 
 export function withAuth(
-  handler: (req: NextApiRequest, res: NextApiResponse, session: Session) => void
-) {
+  handler: (req: NextApiRequest, res: NextApiResponse, session: Session) => Promise<void> | void
+): NextApiHandler {
   return async (req: NextApiRequest, res: NextApiResponse) => {
     const session = await getServerSession(req, res, authOptions);
 
@@ -19,14 +19,14 @@ export function withAuth(
   };
 }
 
-export function withAdminAuth(handler: NextApiHandler) {
+export function withAdminAuth(handler: NextApiHandler): NextApiHandler {
   return withAuth(async (req, res, session) => {
     const position = session.user.position;
 
     if (!isAdminPosition(position)) {
-      return res.status(403).json({ error: "Admin Only" });
+      return res.status(403).json({ error: "Forbidden - Admin Access Required" });
     }
 
-    return handler(req, res);
+    await handler(req, res);
   });
 }
