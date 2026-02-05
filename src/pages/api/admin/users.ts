@@ -2,8 +2,13 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import clientPromise from "@/lib/mongodb";
 import { getPHTDateString } from "@/utils/dateUtils";
 import { withAdminAuth } from "@/utils/withAuth";
+import { authorize } from "@/lib/auth/authorize";
+import { AttendanceRecord, UserData, UserProfile } from "@/types/user";
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const session = await authorize(req, res, { roles: ["admin"] });
+  if (!session) return res.status(401).json({ message: "Unauthorized" }); // Authorization failed, response already sent
+
   if (req.method !== "GET") {
     return res.status(405).json({ message: "Method not allowed" });
   }
@@ -16,30 +21,32 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const todayPHT = getPHTDateString();
 
     // Fetch all users
-    const users = await db.collection("users").find({}).toArray();
+    const users = await db.collection<UserProfile>("users").find({}).toArray();
 
     // Check attendance records for today to determine login status
     // Sort newest-first so the first record we encounter per user is the latest
     const attendanceRecords = await db
-      .collection("attendance")
+      .collection<AttendanceRecord>("attendance")
       .find({ date: todayPHT })
       .sort({ createdAt: -1 })
       .toArray();
 
     // Create a map of user emails to the latest attendance record for today
     // Handle both userEmail (new format) and fallback to matching by userName for older records
-    const todayAttendanceMap = new Map();
-    const userNameToEmailMap = new Map();
+    const todayAttendanceMap = new Map<string, { timeIn: string | null; timeOut: string | null }>();
+    const userNameToEmailMap = new Map<string, string>();
 
     // First, create a mapping of userNames to emails from the users collection
     users.forEach((user) => {
-      userNameToEmailMap.set(user.name, user.email);
+      if (user.email && user.name) {
+        userNameToEmailMap.set(user.name, user.email);
+      }
     });
 
     attendanceRecords.forEach((record) => {
       // Try to get email from record.userEmail, or fallback to mapping userName to email
       const userEmail =
-        record.userEmail || userNameToEmailMap.get(record.userName);
+        record.userEmail || userNameToEmailMap.get(record.userName || "");
 
       if (userEmail && !todayAttendanceMap.has(userEmail)) {
         todayAttendanceMap.set(userEmail, {
@@ -51,17 +58,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     // Get all attendance records to determine latest login times
     const allAttendanceRecords = await db
-      .collection("attendance")
+      .collection<AttendanceRecord>("attendance")
       .find({})
       .sort({ createdAt: -1 })
       .toArray();
 
     // Create a map of user emails to their latest login time
-    const loginMap = new Map();
+    const loginMap = new Map<string, Date | null>();
     allAttendanceRecords.forEach((record) => {
       // Try to get email from record.userEmail, or fallback to mapping userName to email
       const userEmail =
-        record.userEmail || userNameToEmailMap.get(record.userName);
+        record.userEmail || userNameToEmailMap.get(record.userName || "");
 
       if (userEmail && !loginMap.has(userEmail)) {
         // Convert createdAt to proper Date object
@@ -80,22 +87,23 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     });
 
     // Format user data with login information
-    const usersWithLoginStatus = users.map((user) => {
+    const usersWithLoginStatus: UserData[] = users.map((user) => {
       const todayAttendance = todayAttendanceMap.get(user.email);
+      const lastLogin = loginMap.get(user.email);
       return {
         id: user._id?.toString() || "",
         name: user.name,
         email: user.email,
-        image: user.image || null,
+        image: user.image || undefined,
         provider: user.provider,
         department: user.department || "Unassigned",
         position: user.position || "Member",
         color: user.color || "blue",
         createdAt: user.createdAt,
         lastLoginToday: todayAttendanceMap.has(user.email),
-        lastLoginTime: loginMap.get(user.email) || null,
-        timeInToday: todayAttendance?.timeIn || null,
-        timeOutToday: todayAttendance?.timeOut || null,
+        lastLoginTime: lastLogin ? lastLogin.toISOString() : undefined,
+        timeInToday: todayAttendance?.timeIn ?? undefined,
+        timeOutToday: todayAttendance?.timeOut ?? undefined,
       };
     });
 

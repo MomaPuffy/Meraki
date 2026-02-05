@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "npx eslint \"src/**/*.{js,ts,tsx,mjs,cjs,mts,cts}\" --fix"
+    "lint": "npx eslint \"src/**/*.{js,ts,tsx,mjs,cjs,mts,cts}\" --fix",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@capacitor/camera": "^7.0.2",

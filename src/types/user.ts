@@ -1,4 +1,5 @@
 export interface UserProfile {
+  _id?: { toString(): string}
   id: string;
   name: string;
   email: string;
@@ -34,4 +35,13 @@ export interface User {
   name: string;
   avatar?: string;
   isOnline: boolean;
+}
+
+export interface AttendanceRecord {
+  userEmail?: string;
+  userName?: string;
+  date?: string;
+  timeIn?: string | null;
+  timeOut?: string | null;
+  createdAt: Date | string | { $date: string };
 }
