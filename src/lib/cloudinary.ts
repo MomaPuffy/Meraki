@@ -35,7 +35,7 @@ export const generateJobId = (): string => {
 export const queueImageUpload = (
   jobId: string,
   base64Image: string,
-  folder: string = "attendance"
+  folder: string = "attendance",
 ): UploadJob => {
   const job: UploadJob = {
     id: jobId,
@@ -128,10 +128,47 @@ export const cleanupOldJobs = (maxAgeHours: number = 24): void => {
   }
 };
 
+// Upload function for images that should preserve original dimensions (e.g. yearbook photos)
+export const uploadImageFull = async (
+  base64Image: string,
+  folder: string = "yearbook",
+) => {
+  try {
+    const result = await cloudinary.uploader.upload(base64Image, {
+      folder: folder,
+      resource_type: "image",
+      type: "private",
+      transformation: [{ quality: "auto" }, { format: "jpg" }],
+    });
+
+    const signedUrl = cloudinary.url(result.public_id, {
+      type: "private",
+      sign_url: true,
+      secure: true,
+    });
+
+    const signedThumbnail = cloudinary.url(result.public_id, {
+      type: "private",
+      sign_url: true,
+      secure: true,
+      transformation: [{ width: 400, crop: "scale" }],
+    });
+
+    return {
+      url: signedUrl,
+      public_id: result.public_id,
+      thumbnail: signedThumbnail,
+    };
+  } catch (error) {
+    console.error("Cloudinary upload error:", error);
+    throw new Error("Failed to upload image");
+  }
+};
+
 // Original synchronous upload function (kept for backwards compatibility)
 export const uploadImage = async (
   base64Image: string,
-  folder: string = "attendance"
+  folder: string = "attendance",
 ) => {
   try {
     const result = await cloudinary.uploader.upload(base64Image, {
@@ -173,7 +210,7 @@ export const uploadImage = async (
 // Generate signed URLs for private images
 export const getSignedImageUrl = (
   publicId: string,
-  transformation?: object
+  transformation?: object,
 ) => {
   return cloudinary.url(publicId, {
     type: "private",

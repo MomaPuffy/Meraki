@@ -12,7 +12,7 @@ export default function UpcomingEvents() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
-    null
+    null,
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -203,14 +203,14 @@ export default function UpcomingEvents() {
                 </p>
               </div>
               <span
-                className={`text-xs px-2 py-1 rounded ml-2 flex-shrink-0 ${
+                className={`text-xs px-2 py-1 rounded ml-2 shrink-0 ${
                   event.category === "meeting"
                     ? "bg-blue-100 text-blue-800"
                     : event.category === "deadline"
-                    ? "bg-red-100 text-red-800"
-                    : event.category === "personal"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-gray-100 text-gray-800"
+                      ? "bg-red-100 text-red-800"
+                      : event.category === "personal"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-gray-100 text-gray-800"
                 }`}
               >
                 {event.category}
@@ -233,7 +233,7 @@ export default function UpcomingEvents() {
         title={selectedEvent?.title || "Event Details"}
         maxWidth="max-w-lg"
         headerColorClass={getCategoryModalHeader(
-          selectedEvent?.category || "other"
+          selectedEvent?.category || "other",
         )}
       >
         {selectedEvent && (
@@ -257,7 +257,7 @@ export default function UpcomingEvents() {
               <h3 className="font-semibold text-gray-900 mb-1">Category</h3>
               <span
                 className={`inline-block text-xs px-2 py-1 rounded ${getCategoryBadge(
-                  selectedEvent.category || "other"
+                  selectedEvent.category || "other",
                 )}`}
               >
                 {selectedEvent.category
@@ -285,7 +285,7 @@ export default function UpcomingEvents() {
                 <h3 className="font-semibold text-gray-900 mb-1">
                   Description
                 </h3>
-                <p className="text-gray-700 whitespace-pre-wrap break-words">
+                <p className="text-gray-700 whitespace-pre-wrap wrap-break-word">
                   {selectedEvent.description}
                 </p>
               </div>

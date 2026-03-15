@@ -736,6 +736,12 @@ export default function Admin() {
                       {currentUser?.position} Access
                     </span>
                     <a
+                      href="/admin/yearbook"
+                      className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-white/20 text-white hover:bg-white/30 transition-colors"
+                    >
+                      Manage Yearbook
+                    </a>
+                    <a
                       href="/admin/products"
                       className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-white/20 text-white hover:bg-white/30 transition-colors"
                     >

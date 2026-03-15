@@ -71,7 +71,7 @@ export default function Navbar() {
           <li>
             <Link
               href="/dashboard"
-              className="hover:border-b-white hover:border-b-1 px-2 py-1"
+              className="hover:border-b-white hover:border-b px-2 py-1"
             >
               Dashboard
             </Link>
@@ -79,31 +79,33 @@ export default function Navbar() {
           <li>
             <Link
               href="/attendance"
-              className="hover:border-b-white hover:border-b-1 px-2 py-1"
+              className="hover:border-b-white hover:border-b px-2 py-1"
             >
               Attendance
             </Link>
           </li>
           <li>
             <Link
-              href="/chat"
-              className="hover:border-b-white hover:border-b-1 px-2 py-1"
+              href="/yearbook"
+              className="hover:border-b-white hover:border-b px-2 py-1"
             >
-              Chat
+              Yearbook
             </Link>
           </li>
-          <li>
-            <Link
-              href="/admin"
-              className="hover:border-b-white hover:border-b-1 px-2 py-1"
-            >
-              Admin
-            </Link>
-          </li>
+          {isAdmin && (
+            <li>
+              <Link
+                href="/admin"
+                className="hover:border-b-white hover:border-b px-2 py-1"
+              >
+                Admin
+              </Link>
+            </li>
+          )}
           <li>
             <Link
               href="https://docs.google.com/spreadsheets/d/1BLdK3ry7XJymGRWiVIefZ1kdpxpWy-2XajthgD9ItPg"
-              className="hover:border-b-white hover:border-b-1 px-2 py-1"
+              className="hover:border-b-white hover:border-b px-2 py-1"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -113,7 +115,7 @@ export default function Navbar() {
           <li>
             <Link
               href="https://docs.google.com/spreadsheets/d/10AYkMS8_EohZqHXsZ3sA_qh-8iwRpfSeQTUfJa_XtMM"
-              className="hover:border-b-white hover:border-b-1 px-2 py-1"
+              className="hover:border-b-white hover:border-b px-2 py-1"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -281,11 +283,11 @@ export default function Navbar() {
           </li>
           <li>
             <Link
-              href="/chat"
+              href="/yearbook"
               className="block px-4 py-3 hover:bg-[#424242] transition-colors"
               onClick={() => setShowMobileMenu(false)}
             >
-              Chat
+              Yearbook
             </Link>
           </li>
           {isAdmin && (

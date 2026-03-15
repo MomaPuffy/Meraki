@@ -15,7 +15,7 @@ import {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
 ) {
   try {
     // Get the session from NextAuth
@@ -77,7 +77,7 @@ export default async function handler(
       // Calculate color based on current position and new department
       const userColor = getUserColorKey(
         currentUser.position,
-        department || "Unassigned"
+        department || "Unassigned",
       );
 
       let imageUrl = currentUser.image;
@@ -87,7 +87,7 @@ export default async function handler(
         try {
           const uploadResult = await uploadImage(
             image,
-            `profiles/${session.user.name}`
+            `profiles/${session.user.name}`,
           );
           imageUrl = uploadResult.url;
         } catch (uploadError) {
@@ -106,7 +106,7 @@ export default async function handler(
             color: userColor,
             updatedAt: new Date(),
           },
-        }
+        },
       );
 
       if (result.matchedCount === 0) {

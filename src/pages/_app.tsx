@@ -59,7 +59,7 @@ export default function MyApp({ Component, pageProps }: AppProps) {
     <SessionProvider session={pageProps.session}>
       <CalendarProvider>
         <AuthGuard>
-          <div className="min-h-screen bg-gradient-to-br from-gray-100 to-purple-300 text-black">
+          <div className="min-h-screen bg-linear-to-br from-gray-100 to-purple-300 text-black">
             <Navbar />
             <Component {...pageProps} />
             <Footer />

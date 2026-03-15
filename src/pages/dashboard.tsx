@@ -2,7 +2,6 @@
 
 import { useSession } from "next-auth/react";
 import Image from "next/image";
-import ChatWidget from "@/app/components/chat/ChatWidget";
 import UpcomingEvents from "@/app/components/calendar/UpcomingEvents";
 import { getUserColorTheme } from "@/lib/colorConfig";
 import Link from "next/link";
@@ -12,7 +11,9 @@ import {
   IoLogoInstagram,
   IoLogoTiktok,
 } from "react-icons/io5";
+import { GrGallery } from "react-icons/gr";
 import { FaCartShopping } from "react-icons/fa6";
+import YearBook from "@/app/components/yearbook/Yearbook";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -65,7 +66,7 @@ export default function Home() {
         {/* Welcome Header */}
         <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
           <div
-            className={`bg-gradient-to-r ${userColors.headerFrom} ${userColors.headerTo} px-4 sm:px-6 py-6 sm:py-8`}
+            className={`bg-linear-to-r ${userColors.headerFrom} ${userColors.headerTo} px-4 sm:px-6 py-6 sm:py-8`}
           >
             <div className="text-center">
               <div className="mb-4">
@@ -77,7 +78,7 @@ export default function Home() {
                   className="mx-auto"
                 />
               </div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white break-words">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white wrap-break-word">
                 Welcome to Meraki
               </h1>
               <p className="text-blue-100 text-sm sm:text-base md:text-lg mt-2">
@@ -96,7 +97,7 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {/* User Profile Preview Module */}
           <div className="col-span-1 md:col-span-2 lg:col-span-2 xl:col-span-2 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="px-6 py-4 border-b border-gray-200 bg-linear-to-r from-blue-50 to-indigo-50">
               <h2 className="text-lg font-semibold text-gray-900 flex items-center justify-center">
                 <svg
                   className="w-5 h-5 text-blue-600 mr-2"
@@ -114,9 +115,9 @@ export default function Home() {
                 User Profile
               </h2>
             </div>
-            <div className="p-6 flex items-center justify-center min-h-[300px]">
+            <div className="p-6 flex items-center justify-center min-h-75">
               <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 text-center sm:text-left">
-                <div className="relative flex-shrink-0">
+                <div className="relative shrink-0">
                   <Image
                     src={session.user?.image || "/meraki.png"}
                     alt={session.user?.name || "User"}
@@ -155,7 +156,7 @@ export default function Home() {
 
           {/* Upcoming Events Module */}
           <div className="bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-blue-50">
+            <div className="px-6 py-4 border-b border-gray-200 bg-linear-to-r from-green-50 to-blue-50">
               <h2 className="text-lg font-semibold text-gray-900 flex items-center">
                 <svg
                   className="w-5 h-5 text-green-600 mr-2"
@@ -180,32 +181,20 @@ export default function Home() {
 
           {/* Chat Widget Module */}
           <div className="bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="px-6 py-4 border-b border-gray-200 bg-linear-to-r from-blue-50 to-indigo-50">
               <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-                <svg
-                  className="w-5 h-5 text-blue-600 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
-                </svg>
-                Chat
+                <GrGallery className="w-5 h-5 text-blue-600 mr-2" />
+                Year Book
               </h2>
             </div>
             <div className="p-6">
-              <ChatWidget />
+              <YearBook />
             </div>
           </div>
 
           {/* Recent Activity Module */}
           <div className="col-span-1 md:col-span-2 lg:col-span-1 xl:col-span-2 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-pink-50">
+            <div className="px-6 py-4 border-b border-gray-200 bg-linear-to-r from-purple-50 to-pink-50">
               <h2 className="text-lg font-semibold text-gray-900 flex items-center">
                 <IoShareSocial className="w-5 h-5 text-purple-600 mr-2" />
                 Social Media
@@ -240,7 +229,7 @@ export default function Home() {
                   href="https://www.instagram.com/pinakacutenaartclub"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center p-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg transition-colors"
+                  className="flex items-center justify-center p-3 bg-linear-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg transition-colors"
                 >
                   <IoLogoInstagram className="w-5 h-5 mr-2" />
                   Instagram
@@ -251,7 +240,7 @@ export default function Home() {
 
           {/* Shop */}
           <div className="bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-yellow-50">
+            <div className="px-6 py-4 border-b border-gray-200 bg-linear-to-r from-orange-50 to-yellow-50">
               <h2 className="text-lg font-semibold text-gray-400 flex items-center">
                 <FaCartShopping className="w-5 h-5 text-orange-400 mr-2" />
                 Shop
@@ -278,7 +267,7 @@ export default function Home() {
           </div>
 
           <div className="bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-teal-50 to-cyan-50">
+            <div className="px-6 py-4 border-b border-gray-200 bg-linear-to-r from-teal-50 to-cyan-50">
               <h2 className="text-lg font-semibold text-gray-400 flex items-center">
                 <svg
                   className="w-5 h-5 text-teal-400 mr-2"

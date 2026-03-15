@@ -14,7 +14,6 @@ export default function About() {
         <h2 className="text-2xl font-semibold mt-6 mb-3">Features</h2>
         <ul className="list-disc pl-6">
           <li>Calendar and event management</li>
-          <li>Real-time chat functionality</li>
           <li>Attendance tracking</li>
           <li>User profile management</li>
           <li>Administrative controls</li>

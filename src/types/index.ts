@@ -8,8 +8,8 @@ export * from "./auth";
 export * from "./event";
 export * from "./calendar";
 
-// Chat-related types
-export * from "./chat";
-
 // Theme-related types
 export * from "./theme";
+
+// Yearbook-related types
+export * from "./yearbook";
