@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
-import { getUserColorTheme } from "@/lib/colorConfig";
+import {
+  getUserColorTheme,
+  POSITION_COLOR_MAP,
+  DEPARTMENT_COLOR_MAP,
+} from "@/lib/colorConfig";
 import { formatTimeForDisplay, formatDateForDisplay } from "@/utils/dateUtils";
 import { UserData, UserAttendanceModalData, AttendanceRecord } from "@/types";
 import { isAdminPosition } from "@/utils/adminRoles";
@@ -26,6 +30,11 @@ export default function Admin() {
     useState<UserAttendanceModalData | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserData | null>(null);
+  const [editDepartment, setEditDepartment] = useState("");
+  const [editPosition, setEditPosition] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+  const [editMessage, setEditMessage] = useState("");
   const [selectedPhoto, setSelectedPhoto] = useState<{
     url: string;
     thumbnail: string;
@@ -168,6 +177,54 @@ export default function Admin() {
   const closeModal = () => {
     setShowModal(false);
     setSelectedUser(null);
+  };
+
+  const openEditUser = (user: UserData, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingUser(user);
+    setEditDepartment(user.department || "");
+    setEditPosition(user.position || "");
+    setEditMessage("");
+  };
+
+  const closeEditUser = () => {
+    setEditingUser(null);
+    setEditMessage("");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingUser) return;
+    setEditSaving(true);
+    setEditMessage("");
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: editingUser.id,
+          department: editDepartment,
+          position: editPosition,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === editingUser.id
+              ? { ...u, department: editDepartment, position: editPosition }
+              : u,
+          ),
+        );
+        setEditMessage("Saved successfully!");
+        setTimeout(closeEditUser, 1000);
+      } else {
+        setEditMessage(data.message || "Failed to save");
+      }
+    } catch {
+      setEditMessage("An error occurred. Please try again.");
+    } finally {
+      setEditSaving(false);
+    }
   };
 
   const handlePhotoClick = (
@@ -436,17 +493,25 @@ export default function Admin() {
 
   // Custom render functions for auto-generated columns
   const renderUserActions = (user: UserData) => (
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        handleResetPassword(user.id, user.email);
-      }}
-      disabled={resetLoading === user.id}
-      className="text-orange-600 hover:text-orange-900 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-      title="Reset Password"
-    >
-      {resetLoading === user.id ? "Sending..." : "Reset Password"}
-    </button>
+    <div className="flex flex-col gap-1 items-center">
+      <button
+        onClick={(e) => openEditUser(user, e)}
+        className="text-blue-600 hover:text-blue-900 text-xs"
+      >
+        Edit Info
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          handleResetPassword(user.id, user.email);
+        }}
+        disabled={resetLoading === user.id}
+        className="text-orange-600 hover:text-orange-900 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+        title="Reset Password"
+      >
+        {resetLoading === user.id ? "Sending..." : "Reset Password"}
+      </button>
+    </div>
   );
 
   // Custom columns for complex rendering
@@ -913,6 +978,83 @@ export default function Admin() {
           )}
         />
       )}
+
+      {/* Edit User Modal */}
+      <Modal
+        isOpen={!!editingUser}
+        onClose={closeEditUser}
+        title={editingUser ? `Edit — ${editingUser.name}` : ""}
+        maxWidth="max-w-md"
+        headerColorClass={`bg-gradient-to-r ${getUserColorTheme(editingUser?.position, editingUser?.department).headerFrom} ${getUserColorTheme(editingUser?.position, editingUser?.department).headerTo}`}
+      >
+        {editingUser && (
+          <div className="space-y-5">
+            {/* Department */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Department
+              </label>
+              <select
+                value={editDepartment}
+                onChange={(e) => setEditDepartment(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="">Unassigned</option>
+                {Object.keys(DEPARTMENT_COLOR_MAP).map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept.charAt(0).toUpperCase() + dept.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Position */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Position
+              </label>
+              <select
+                value={editPosition}
+                onChange={(e) => setEditPosition(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="">Member</option>
+                {Object.keys(POSITION_COLOR_MAP).map((pos) => (
+                  <option key={pos} value={pos}>
+                    {pos.charAt(0).toUpperCase() + pos.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {editMessage && (
+              <p
+                className={`text-sm ${editMessage.includes("success") ? "text-green-600" : "text-red-600"}`}
+              >
+                {editMessage}
+              </p>
+            )}
+
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={closeEditUser}
+                className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEdit}
+                disabled={editSaving}
+                className="px-5 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+              >
+                {editSaving ? "Saving..." : "Save changes"}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </>
   );
 }

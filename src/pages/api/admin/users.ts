@@ -3,8 +3,52 @@ import clientPromise from "@/lib/mongodb";
 import { getPHTDateString } from "@/utils/dateUtils";
 import { withAdminAuth } from "@/utils/withAuth";
 import { AttendanceRecord, UserData, UserProfile } from "@/types/user";
+import { ObjectId } from "mongodb";
+import { getUserColorKey } from "@/lib/colorConfig";
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method === "PATCH") {
+    const { userId, department, position } = req.body as {
+      userId?: string;
+      department?: string;
+      position?: string;
+    };
+
+    if (!userId) {
+      return res.status(400).json({ message: "userId is required" });
+    }
+
+    try {
+      const client = await clientPromise;
+      const db = client.db("meraki");
+
+      const updateFields: Record<string, string> = {};
+      if (department !== undefined) updateFields.department = department;
+      if (position !== undefined) {
+        updateFields.position = position;
+        // Recalculate color when position changes
+        updateFields.color = getUserColorKey(position, department);
+      }
+
+      if (Object.keys(updateFields).length === 0) {
+        return res.status(400).json({ message: "No fields to update" });
+      }
+
+      const result = await db
+        .collection("users")
+        .updateOne({ _id: new ObjectId(userId) }, { $set: updateFields });
+
+      if (result.matchedCount === 0) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      return res.status(200).json({ message: "User updated successfully" });
+    } catch (err) {
+      console.error("Update user error:", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  }
+
   if (req.method !== "GET") {
     return res.status(405).json({ message: "Method not allowed" });
   }
@@ -29,7 +73,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     // Create a map of user emails to the latest attendance record for today
     // Handle both userEmail (new format) and fallback to matching by userName for older records
-    const todayAttendanceMap = new Map<string, { timeIn: string | null; timeOut: string | null }>();
+    const todayAttendanceMap = new Map<
+      string,
+      { timeIn: string | null; timeOut: string | null }
+    >();
     const userNameToEmailMap = new Map<string, string>();
 
     // First, create a mapping of userNames to emails from the users collection
@@ -45,10 +92,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         typeof record.userEmail === "string"
           ? record.userEmail
           : typeof record.userName === "string"
-          ? userNameToEmailMap.get(record.userName)
-          : undefined;
+            ? userNameToEmailMap.get(record.userName)
+            : undefined;
 
-      if (typeof userEmail === "string" && userEmail && !todayAttendanceMap.has(userEmail)) {
+      if (
+        typeof userEmail === "string" &&
+        userEmail &&
+        !todayAttendanceMap.has(userEmail)
+      ) {
         todayAttendanceMap.set(userEmail, {
           timeIn: record.timeIn || null,
           timeOut: record.timeOut || null,
@@ -71,10 +122,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         typeof record.userEmail === "string"
           ? record.userEmail
           : typeof record.userName === "string"
-          ? userNameToEmailMap.get(record.userName)
-          : undefined;
+            ? userNameToEmailMap.get(record.userName)
+            : undefined;
 
-      if (typeof userEmail === "string" && userEmail && !loginMap.has(userEmail)) {
+      if (
+        typeof userEmail === "string" &&
+        userEmail &&
+        !loginMap.has(userEmail)
+      ) {
         // Convert createdAt to proper Date object
         let loginTime: string | null = null;
         if (record.createdAt) {
@@ -88,7 +143,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             "$date" in record.createdAt &&
             typeof (record.createdAt as { $date: string }).$date === "string"
           ) {
-            loginTime = new Date((record.createdAt as { $date: string }).$date).toISOString();
+            loginTime = new Date(
+              (record.createdAt as { $date: string }).$date,
+            ).toISOString();
           }
         }
         loginMap.set(userEmail, loginTime);

@@ -142,11 +142,19 @@ function DeptEditor({
   dept,
   onChange,
   onRemove,
+  onMoveUp,
+  onMoveDown,
+  isFirst,
+  isLast,
   allUsers,
 }: {
   dept: YearbookDepartment;
   onChange: (d: YearbookDepartment) => void;
   onRemove: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  isFirst: boolean;
+  isLast: boolean;
   allUsers: {
     id: string;
     name: string;
@@ -156,6 +164,7 @@ function DeptEditor({
   }[];
 }) {
   const [uploadingActivity, setUploadingActivity] = useState(false);
+  const [deptOpen, setDeptOpen] = useState(true);
   const activityRef = useRef<HTMLInputElement>(null);
 
   // Users whose department matches this dept name (case-insensitive)
@@ -226,6 +235,27 @@ function DeptEditor({
     <div className="bg-white rounded-2xl shadow-md border border-purple-100 overflow-hidden mb-6">
       {/* Dept header */}
       <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-5 py-4 flex items-center gap-3 border-b border-purple-100">
+        {/* Reorder buttons */}
+        <div className="flex flex-col gap-0.5 flex-shrink-0">
+          <button
+            type="button"
+            onClick={onMoveUp}
+            disabled={isFirst}
+            className="w-6 h-5 flex items-center justify-center text-purple-400 hover:text-purple-700 disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-xs leading-none"
+            title="Move up"
+          >
+            ▲
+          </button>
+          <button
+            type="button"
+            onClick={onMoveDown}
+            disabled={isLast}
+            className="w-6 h-5 flex items-center justify-center text-purple-400 hover:text-purple-700 disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-xs leading-none"
+            title="Move down"
+          >
+            ▼
+          </button>
+        </div>
         <input
           type="text"
           placeholder="Department name *"
@@ -233,99 +263,112 @@ function DeptEditor({
           onChange={(e) => onChange({ ...dept, name: e.target.value })}
           className="flex-1 bg-transparent border-b border-purple-300 text-purple-800 font-semibold text-lg focus:outline-none focus:border-purple-600 placeholder-purple-300"
         />
+        <span className="text-xs text-gray-400 flex-shrink-0">
+          {dept.members.length} members
+        </span>
+        <button
+          type="button"
+          onClick={() => setDeptOpen((o) => !o)}
+          className="text-purple-400 hover:text-purple-700 transition-colors text-sm flex-shrink-0 w-6 text-center"
+          title={deptOpen ? "Collapse" : "Expand"}
+        >
+          {deptOpen ? "▾" : "▸"}
+        </button>
         <button
           type="button"
           onClick={onRemove}
-          className="text-red-400 hover:text-red-600 text-sm font-medium"
+          className="text-red-400 hover:text-red-600 text-sm font-medium flex-shrink-0"
         >
-          Remove dept
+          Remove
         </button>
       </div>
 
-      <div className="p-5 space-y-4">
-        {/* Members */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
-              Members
-            </div>
-            {unaddedUsers.length > 0 && (
-              <button
-                type="button"
-                onClick={syncFromUsers}
-                className="text-xs text-purple-600 hover:text-purple-800 bg-purple-50 border border-purple-200 rounded-lg px-3 py-1 hover:bg-purple-100 transition-colors flex items-center gap-1"
-              >
-                ↓ Pull {unaddedUsers.length} from user data
-              </button>
-            )}
-            {matchingUsers.length > 0 && unaddedUsers.length === 0 && (
-              <span className="text-xs text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-1">
-                ✓ All {matchingUsers.length} members synced
+      {deptOpen && (
+        <div className="p-5 space-y-4">
+          {/* Members */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
+                Members
               </span>
-            )}
-          </div>
-          <div className="space-y-3">
-            {dept.members.map((m, i) => (
-              <MemberEditor
-                key={m.id}
-                member={m}
-                onChange={(updated) => updateMember(i, updated)}
-                onRemove={() => removeMember(i)}
-              />
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={addMember}
-            className="mt-3 text-sm text-purple-600 hover:text-purple-800 border border-purple-200 rounded-lg px-4 py-2 hover:bg-purple-50 transition-colors"
-          >
-            + Add member
-          </button>
-        </div>
-
-        {/* Activity photos */}
-        <div>
-          <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">
-            Activity Photos
-          </div>
-          {dept.activityPhotos.length > 0 && (
-            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mb-3">
-              {dept.activityPhotos.map((url, i) => (
-                <div key={i} className="relative group aspect-square">
-                  <img
-                    src={url}
-                    alt={`Activity ${i + 1}`}
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeActivityPhoto(i)}
-                    className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-5 h-5 text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                  >
-                    ×
-                  </button>
-                </div>
+              {unaddedUsers.length > 0 && (
+                <button
+                  type="button"
+                  onClick={syncFromUsers}
+                  className="text-xs text-purple-600 hover:text-purple-800 bg-purple-50 border border-purple-200 rounded-lg px-3 py-1 hover:bg-purple-100 transition-colors"
+                >
+                  ↓ Pull {unaddedUsers.length} from user data
+                </button>
+              )}
+              {matchingUsers.length > 0 && unaddedUsers.length === 0 && (
+                <span className="text-xs text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-1">
+                  ✓ All {matchingUsers.length} synced
+                </span>
+              )}
+            </div>
+            <div className="space-y-3">
+              {dept.members.map((m, i) => (
+                <MemberEditor
+                  key={m.id}
+                  member={m}
+                  onChange={(updated) => updateMember(i, updated)}
+                  onRemove={() => removeMember(i)}
+                />
               ))}
             </div>
-          )}
-          <button
-            type="button"
-            onClick={() => activityRef.current?.click()}
-            disabled={uploadingActivity}
-            className="text-sm text-purple-600 hover:text-purple-800 border border-dashed border-purple-300 rounded-lg px-4 py-2 hover:bg-purple-50 transition-colors disabled:opacity-50"
-          >
-            {uploadingActivity ? "Uploading..." : "+ Add activity photos"}
-          </button>
-          <input
-            ref={activityRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={handleActivityPhotos}
-          />
+            <button
+              type="button"
+              onClick={addMember}
+              className="mt-3 text-sm text-purple-600 hover:text-purple-800 border border-purple-200 rounded-lg px-4 py-2 hover:bg-purple-50 transition-colors"
+            >
+              + Add member
+            </button>
+          </div>
+
+          {/* Activity photos */}
+          <div>
+            <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">
+              Activity Photos
+            </div>
+            {dept.activityPhotos.length > 0 && (
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mb-3">
+                {dept.activityPhotos.map((url, i) => (
+                  <div key={i} className="relative group aspect-square">
+                    <img
+                      src={url}
+                      alt={`Activity ${i + 1}`}
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeActivityPhoto(i)}
+                      className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-5 h-5 text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => activityRef.current?.click()}
+              disabled={uploadingActivity}
+              className="text-sm text-purple-600 hover:text-purple-800 border border-dashed border-purple-300 rounded-lg px-4 py-2 hover:bg-purple-50 transition-colors disabled:opacity-50"
+            >
+              {uploadingActivity ? "Uploading..." : "+ Add activity photos"}
+            </button>
+            <input
+              ref={activityRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handleActivityPhotos}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -388,6 +431,15 @@ function YearbookEditor({
 
   const removeDept = (idx: number) =>
     setDepartments(departments.filter((_, i) => i !== idx));
+
+  const moveDept = (idx: number, dir: -1 | 1) => {
+    const next = [...departments];
+    const target = idx + dir;
+    if (target < 0 || target >= next.length) return;
+    [next[idx], next[target]] = [next[target], next[idx]];
+    setDepartments(next);
+  };
+
   const addDept = () => setDepartments([...departments, emptyDept()]);
 
   const handleSave = async () => {
@@ -515,6 +567,10 @@ function YearbookEditor({
           dept={dept}
           onChange={(d) => updateDept(i, d)}
           onRemove={() => removeDept(i)}
+          onMoveUp={() => moveDept(i, -1)}
+          onMoveDown={() => moveDept(i, 1)}
+          isFirst={i === 0}
+          isLast={i === departments.length - 1}
           allUsers={allUsers}
         />
       ))}
@@ -717,7 +773,7 @@ export default function AdminYearbook() {
               <h3 className="text-sm font-semibold text-gray-700 mb-3">
                 New Yearbook
               </h3>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2">
                 <input
                   type="text"
                   placeholder="Year (e.g. 2025)"

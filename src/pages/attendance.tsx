@@ -10,7 +10,6 @@ import {
 } from "@/utils/dateUtils";
 import DataTable, { Column } from "@/components/DataTable";
 import * as Camera from "@capacitor/camera";
-import { useAsyncUpload } from "@/hooks/useAsyncUpload";
 
 // Minimal runtime shape for the Capacitor Camera photo result we use.
 type CapacitorPhoto = {
@@ -33,25 +32,6 @@ export default function Attendance() {
     null,
   );
   const [uploadStatus, setUploadStatus] = useState<string>("");
-
-  // Initialize async upload hook
-  const { startPolling } = useAsyncUpload({
-    onComplete: (result) => {
-      console.log("Upload completed:", result);
-      setUploadStatus("Upload completed successfully!");
-      // Refresh attendance records to show the updated images
-      fetchAttendanceRecords();
-      // Clear status after a few seconds
-      setTimeout(() => setUploadStatus(""), 3000);
-    },
-    onError: (error) => {
-      console.error("Upload failed:", error);
-      setUploadStatus(`Upload failed: ${error}`);
-      // Clear status after a few seconds
-      setTimeout(() => setUploadStatus(""), 5000);
-    },
-  });
-  // Using Capacitor Camera plugin via dynamic import (client-only). No live preview.
 
   useEffect(() => {
     const fetchData = async () => {
@@ -147,7 +127,7 @@ export default function Attendance() {
         return;
       }
 
-      // Submit attendance (submitAttendance manages actionLoading)
+      // Submit attendance with the captured photo
       await submitAttendance(type, dataUrl as string);
     } catch (err) {
       console.error("Capacitor Camera error:", err);
@@ -166,39 +146,76 @@ export default function Attendance() {
 
   const submitAttendance = async (
     type: "time-in" | "time-out",
-    image?: string,
+    dataUrl: string,
   ) => {
     setActionLoading(true);
     setUploadStatus("");
 
     try {
-      const response = await fetch("/api/attendance/async", {
+      // ── Step 1: Get a signed upload signature from our server ──
+      setUploadStatus("Preparing upload...");
+      const sigRes = await fetch("/api/attendance/sign-upload", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ type, image }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+
+      if (!sigRes.ok) {
+        throw new Error("Failed to get upload signature");
+      }
+
+      const { signature, timestamp, folder, cloudName, apiKey } =
+        await sigRes.json();
+
+      // ── Step 2: Upload directly to Cloudinary from the client ──
+      setUploadStatus("Uploading photo...");
+
+      const formData = new FormData();
+      formData.append("file", dataUrl);
+      formData.append("api_key", apiKey);
+      formData.append("timestamp", String(timestamp));
+      formData.append("signature", signature);
+      formData.append("folder", folder);
+      formData.append("type", "private");
+      formData.append("transformation", "q_auto,f_jpg");
+
+      const uploadRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        { method: "POST", body: formData },
+      );
+
+      if (!uploadRes.ok) {
+        throw new Error("Photo upload to Cloudinary failed");
+      }
+
+      const uploadData = await uploadRes.json();
+      const imagePublicId: string = uploadData.public_id;
+
+      // ── Step 3: Record attendance with the completed image public_id ──
+      setUploadStatus("Recording attendance...");
+
+      const response = await fetch("/api/attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, imagePublicId }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
         setMessage(data.message);
-
-        // If there's an upload job, start polling for completion
-        if (data.uploadJobId && image) {
-          setUploadStatus("Uploading image...");
-          startPolling(data.uploadJobId);
-        }
-
-        // Refresh the table immediately (will show pending status for images)
+        setUploadStatus("");
         fetchAttendanceRecords();
       } else {
-        setMessage(data.error || "Failed to record attendance");
+        setMessage(data.error || data.message || "Failed to record attendance");
+        setUploadStatus("");
       }
-    } catch (error) {
-      console.error("Submit attendance error:", error);
-      setMessage("Error recording attendance");
+    } catch (err) {
+      console.error("Submit attendance error:", err);
+      setMessage(
+        err instanceof Error ? err.message : "Error recording attendance",
+      );
+      setUploadStatus("");
     } finally {
       setActionLoading(false);
       setActionType(null);
@@ -397,11 +414,11 @@ export default function Attendance() {
     <>
       {/* Date Header */}
       <div className="flex items-center justify-between mb-3 gap-2">
-        <div className="text-sm font-medium text-gray-900 break-words flex-1">
+        <div className="text-sm font-medium text-gray-900 wrap-break-word flex-1">
           {formatDate(record.date || "")}
         </div>
         <span
-          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full flex-shrink-0 ${
+          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full shrink-0 ${
             record.timeOut
               ? "bg-green-100 text-green-800"
               : record.timeIn
@@ -421,13 +438,13 @@ export default function Attendance() {
       <div className="grid grid-cols-2 gap-3 text-sm mb-3">
         <div className="space-y-1">
           <div className="text-xs text-gray-500 mb-1">Time In</div>
-          <div className="text-sm text-gray-900 break-words">
+          <div className="text-sm text-gray-900 wrap-break-word">
             {record.timeIn ? formatTime(record.timeIn) : "-"}
           </div>
         </div>
         <div className="space-y-1">
           <div className="text-xs text-gray-500 mb-1">Time Out</div>
-          <div className="text-sm text-gray-900 break-words">
+          <div className="text-sm text-gray-900 wrap-break-word">
             {record.timeOut ? formatTime(record.timeOut) : "-"}
           </div>
         </div>
@@ -439,7 +456,7 @@ export default function Attendance() {
           <div className="text-xs text-gray-500 mb-2">Photos</div>
           <div className="flex gap-2 flex-wrap">
             {record.timeInImage && (
-              <div className="text-center flex-shrink-0">
+              <div className="text-center shrink-0">
                 {record.timeInImage.status === "pending" ? (
                   <div className="w-12 h-12 rounded-lg border-2 border-green-200 flex items-center justify-center bg-green-50 mx-auto">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
@@ -464,7 +481,7 @@ export default function Attendance() {
                     title="Click to view Time In photo"
                   />
                 ) : null}
-                <div className="text-xs text-green-600 mt-1 break-words">
+                <div className="text-xs text-green-600 mt-1 wrap-break-word">
                   Time In
                   {record.timeInImage.status === "pending" && " (Uploading...)"}
                   {record.timeInImage.status === "failed" && " (Failed)"}
@@ -472,7 +489,7 @@ export default function Attendance() {
               </div>
             )}
             {record.timeOutImage && (
-              <div className="text-center flex-shrink-0">
+              <div className="text-center shrink-0">
                 {record.timeOutImage.status === "pending" ? (
                   <div className="w-12 h-12 rounded-lg border-2 border-red-200 flex items-center justify-center bg-red-50 mx-auto">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
@@ -497,7 +514,7 @@ export default function Attendance() {
                     title="Click to view Time Out photo"
                   />
                 ) : null}
-                <div className="text-xs text-red-600 mt-1 break-words">
+                <div className="text-xs text-red-600 mt-1 wrap-break-word">
                   Time Out
                   {record.timeOutImage.status === "pending" &&
                     " (Uploading...)"}
@@ -517,10 +534,10 @@ export default function Attendance() {
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           {/* Header Section */}
           <div
-            className={`bg-gradient-to-r ${userColors.headerFrom} ${userColors.headerTo} px-4 sm:px-6 py-6 sm:py-8`}
+            className={`bg-linear-to-r ${userColors.headerFrom} ${userColors.headerTo} px-4 sm:px-6 py-6 sm:py-8`}
           >
             <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
-              <div className="relative flex-shrink-0">
+              <div className="relative shrink-0">
                 {userProfile?.image ? (
                   <Image
                     src={userProfile.image}
@@ -538,7 +555,7 @@ export default function Attendance() {
                 )}
               </div>
               <div className="text-white text-center sm:text-left flex-1 min-w-0">
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold wrap-break-word">
                   Attendance Management
                 </h1>
                 <p className="text-blue-100 text-sm sm:text-base md:text-lg">

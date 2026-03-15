@@ -1,9 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { Session } from "next-auth";
 import clientPromise from "@/lib/mongodb";
-import {
-  queueImageUpload,
-  generateJobId,
+import cloudinary, {
   getSignedImageUrl,
   getSignedThumbnailUrl,
 } from "@/lib/cloudinary";
@@ -17,11 +15,10 @@ import {
   serverError,
 } from "@/utils/apiResponse";
 
-// Allow larger request bodies (base64 image uploads). Adjust as needed.
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: "10mb",
+      sizeLimit: "1mb",
     },
   },
 };
@@ -29,15 +26,13 @@ export const config = {
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
-  session: Session
+  session: Session,
 ) {
   if (req.method === "GET") {
     try {
       const client = await clientPromise;
       const db = client.db("meraki");
 
-      // Sort by newest entries first (createdAt descending) so the very latest
-      // attendance document appears at the top. Fall back to date if needed.
       const attendanceRecords = await db
         .collection("attendance")
         .find({ userId: session.user.id })
@@ -73,46 +68,45 @@ async function handler(
 
   if (req.method === "POST") {
     try {
-      const { type, image } = req.body;
+      const { type, imagePublicId } = req.body as {
+        type?: string;
+        imagePublicId?: string;
+      };
+
       if (!type || !["time-in", "time-out"].includes(type)) {
         return badRequest(res, "Invalid attendance type");
+      }
+
+      if (!imagePublicId) {
+        return badRequest(res, "A photo is required for attendance");
       }
 
       const client = await clientPromise;
       const db = client.db("meraki");
       const today = getPHTDateString();
-      const currentPHTTimeString = getPHTTimeString();
+      const currentTime = getPHTTimeString();
 
-      let imageData = null;
-      let uploadJobId = null;
-
-      if (image) {
-        // Use asynchronous upload to prevent Vercel timeouts
-        uploadJobId = generateJobId();
-        queueImageUpload(uploadJobId, image, `attendance/${session.user.name}`);
-
-        // Store job ID temporarily - the actual image URLs will be updated once upload completes
-        imageData = {
-          uploadJobId,
-          url: null, // Will be updated once upload completes
-          thumbnail: null, // Will be updated once upload completes
-          public_id: null, // Will be updated once upload completes
-          status: "pending",
-        };
-      }
+      const imageData = {
+        public_id: imagePublicId,
+        url: getSignedImageUrl(imagePublicId),
+        thumbnail: cloudinary.url(imagePublicId, {
+          type: "private",
+          sign_url: true,
+          secure: true,
+          transformation: [{ width: 150, height: 150, crop: "fill" }],
+        }),
+        status: "completed",
+      };
 
       if (type === "time-in") {
-        // Allow multiple time-in records per day. Each time-in creates a new
-        // attendance document. Time-out will target the most recent record
-        // without a timeOut.
         const newRecord = {
           userId: session.user.id,
           userName: session.user.name,
           userEmail: session.user.email,
           date: today,
-          timeIn: currentPHTTimeString,
+          timeIn: currentTime,
           timeInImage: imageData,
-          createdAt: new Date().toISOString(),
+          createdAt: new Date(),
         };
 
         await db.collection("attendance").insertOne(newRecord);
@@ -132,17 +126,17 @@ async function handler(
           },
           {
             $set: {
-              timeOut: currentPHTTimeString,
+              timeOut: currentTime,
               timeOutImage: imageData,
-              updatedAt: currentPHTTimeString,
+              updatedAt: new Date(),
             },
-          }
+          },
         );
 
         if (updateResult.matchedCount === 0) {
           return badRequest(
             res,
-            "No time-in record found for today or already timed out"
+            "No time-in record found for today or already timed out",
           );
         }
 
