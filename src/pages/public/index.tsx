@@ -61,7 +61,7 @@ export default function Home() {
     // require title + category and either a provided src URL or a selected file
     if (!title || !category || (!src && !file)) {
       alert(
-        "Please provide a title, category and either choose a file or enter an image URL."
+        "Please provide a title, category and either choose a file or enter an image URL.",
       );
       return;
     }
@@ -141,7 +141,7 @@ export default function Home() {
         const json = await res.json();
         // Update both gallery and selectedImage
         setGallery((g) =>
-          g.map((it) => (it._id === json.item._id ? json.item : it))
+          g.map((it) => (it._id === json.item._id ? json.item : it)),
         );
         setSelectedImage(json.item);
       } else {
@@ -156,7 +156,7 @@ export default function Home() {
   const handleDelete = async (itemId: string) => {
     if (
       !confirm(
-        "Are you sure you want to delete this artwork? This action cannot be undone."
+        "Are you sure you want to delete this artwork? This action cannot be undone.",
       )
     ) {
       return;
@@ -367,15 +367,15 @@ export default function Home() {
                                 `/api/gallery/${item._id}/like`,
                                 {
                                   method: "POST",
-                                }
+                                },
                               );
                               if (res.ok) {
                                 const json = await res.json();
                                 // update item in gallery list
                                 setGallery((g) =>
                                   g.map((it) =>
-                                    it._id === json.item._id ? json.item : it
-                                  )
+                                    it._id === json.item._id ? json.item : it,
+                                  ),
                                 );
                               } else {
                                 const err = await res.json();
@@ -432,7 +432,7 @@ export default function Home() {
 
       {/* CTA Footer */}
       <section className="py-10 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto bg-gradient-to-r from-purple-700 to-indigo-600 rounded-lg p-6 sm:p-8 text-center text-white shadow-lg">
+        <div className="max-w-7xl mx-auto bg-linear-to-r from-purple-700 to-indigo-600 rounded-lg p-6 sm:p-8 text-center text-white shadow-lg">
           <h4 className="text-2xl font-semibold">Ready to Share Your Work?</h4>
           <p className="mt-2 text-sm opacity-90">
             Create an account, join our channels and participate in weekly
@@ -610,7 +610,7 @@ export default function Home() {
             isAuthenticated,
             isAdmin,
             handleDelete,
-            deletingId === (selectedImage._id || selectedImage.id)
+            deletingId === (selectedImage._id || selectedImage.id),
           )}
         />
       )}

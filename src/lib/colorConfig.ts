@@ -64,10 +64,10 @@ export type ColorKey = keyof typeof COLOR_THEMES;
 
 // Position to color mapping - easy to modify and extend
 export const POSITION_COLOR_MAP: Record<string, ColorKey> = {
-  "advisor": "green",
-  "president": "green", 
+  adviser: "green",
+  president: "green",
   "vice-president": "green",
-  "member": "blue", // default position
+  member: "blue", // default position
   // Add more positions here as needed
   // "secretary": "purple",
   // "treasurer": "orange",
@@ -79,13 +79,16 @@ export const DEPARTMENT_COLOR_MAP: Record<string, ColorKey> = {
   "multimedia department": "purple",
   "event coordinator": "orange",
   "crafting department": "pink",
-  "cosplayer": "indigo",
+  cosplayer: "indigo",
   // Add more departments here as needed
 };
 
 // Utility function to get color theme based on position and department
 // Position takes priority over department if both are specified
-export const getUserColorTheme = (position?: string, department?: string): ColorTheme => {
+export const getUserColorTheme = (
+  position?: string,
+  department?: string,
+): ColorTheme => {
   // First check position-based colors (higher priority)
   if (position) {
     const normalizedPosition = position.toLowerCase().trim();
@@ -110,7 +113,10 @@ export const getUserColorTheme = (position?: string, department?: string): Color
 
 // Utility function to determine color key for database storage
 // Position takes priority over department
-export const getUserColorKey = (position?: string, department?: string): ColorKey => {
+export const getUserColorKey = (
+  position?: string,
+  department?: string,
+): ColorKey => {
   // First check position-based colors (higher priority)
   if (position) {
     const normalizedPosition = position.toLowerCase().trim();

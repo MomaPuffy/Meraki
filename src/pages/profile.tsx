@@ -172,7 +172,7 @@ export default function Profile() {
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           {/* Header Section */}
           <div
-            className={`bg-gradient-to-r ${
+            className={`bg-linear-to-r ${
               getUserColorTheme(userProfile?.position, userProfile?.department)
                 .headerFrom
             } ${
@@ -181,7 +181,7 @@ export default function Profile() {
             } px-4 sm:px-6 py-6 sm:py-8`}
           >
             <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
-              <div className="relative flex-shrink-0">
+              <div className="relative shrink-0">
                 {userProfile?.image ? (
                   <Image
                     src={userProfile.image}
@@ -199,7 +199,7 @@ export default function Profile() {
                 )}
               </div>
               <div className="text-white text-center sm:text-left flex-1 min-w-0">
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold wrap-break-word">
                   {userProfile?.name}
                 </h1>
                 <p className="text-blue-100 text-sm sm:text-base md:text-lg break-all">
@@ -210,12 +210,12 @@ export default function Profile() {
                     className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
                       getUserColorTheme(
                         userProfile?.position,
-                        userProfile?.department
+                        userProfile?.department,
                       ).badgeBg
                     } ${
                       getUserColorTheme(
                         userProfile?.position,
-                        userProfile?.department
+                        userProfile?.department,
                       ).badgeText
                     }`}
                   >
@@ -318,7 +318,7 @@ export default function Profile() {
                       Profile Picture
                     </label>
                     <div className="flex items-center space-x-4">
-                      <div className="relative flex-shrink-0">
+                      <div className="relative shrink-0">
                         {imagePreview ? (
                           <Image
                             src={imagePreview}
@@ -509,7 +509,7 @@ export default function Profile() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Full Name
                   </label>
-                  <p className="text-base sm:text-lg text-gray-900 break-words">
+                  <p className="text-base sm:text-lg text-gray-900 wrap-break-word">
                     {userProfile?.name}
                   </p>
                 </div>
@@ -540,7 +540,7 @@ export default function Profile() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Department
                   </label>
-                  <p className="text-base sm:text-lg text-gray-900 break-words">
+                  <p className="text-base sm:text-lg text-gray-900 wrap-break-word">
                     {userProfile?.department || "Unassigned"}
                   </p>
                 </div>
@@ -549,7 +549,7 @@ export default function Profile() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Position
                   </label>
-                  <p className="text-base sm:text-lg text-gray-900 break-words">
+                  <p className="text-base sm:text-lg text-gray-900 wrap-break-word">
                     {userProfile?.position || "Member"}
                   </p>
                 </div>
@@ -566,7 +566,7 @@ export default function Profile() {
                             year: "numeric",
                             month: "long",
                             day: "numeric",
-                          }
+                          },
                         )
                       : "Unknown"}
                   </p>
@@ -582,7 +582,7 @@ export default function Profile() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
                 <div className="flex items-start sm:items-center">
                   <svg
-                    className="w-5 h-5 text-blue-600 mr-2 mt-0.5 sm:mt-0 flex-shrink-0"
+                    className="w-5 h-5 text-blue-600 mr-2 mt-0.5 sm:mt-0 shrink-0"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >

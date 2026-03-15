@@ -3,6 +3,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
 import { Yearbook } from "@/types/yearbook";
+import { isAdminPosition } from "@/utils/adminRoles";
 
 export default function YearbookIndex() {
   const { data: session, status } = useSession();
@@ -45,7 +46,7 @@ export default function YearbookIndex() {
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-10">
-          <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-10 text-center">
+          <div className="bg-linear-to-r from-purple-600 to-pink-600 px-8 py-10 text-center">
             <div className="mb-4">
               <Image
                 src="/meraki.png"
@@ -61,6 +62,14 @@ export default function YearbookIndex() {
             <p className="text-purple-100 text-lg">
               Memories, moments, and milestones
             </p>
+            {isAdminPosition(session.user.position) && (
+              <Link
+                href="/admin/yearbook"
+                className="mt-4 inline-block bg-white text-purple-600 font-bold py-2 px-4 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                Manage Yearbook
+              </Link>
+            )}
           </div>
         </div>
 
@@ -93,7 +102,7 @@ export default function YearbookIndex() {
                       className="object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-purple-400 via-pink-400 to-orange-300 flex items-center justify-center">
+                    <div className="w-full h-full bg-linear-to-br from-purple-400 via-pink-400 to-orange-300 flex items-center justify-center">
                       <span className="text-5xl font-bold text-white/60">
                         {yb.year}
                       </span>

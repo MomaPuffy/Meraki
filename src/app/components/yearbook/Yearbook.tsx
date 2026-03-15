@@ -44,7 +44,7 @@ export default function YearBook() {
         <Link
           key={yb.year}
           href={`/yearbook/${yb.year}`}
-          className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border border-purple-100 transition-colors group"
+          className="flex items-center justify-between p-3 rounded-lg bg-linear-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border border-purple-100 transition-colors group"
         >
           <div>
             <p className="font-semibold text-sm text-purple-800">

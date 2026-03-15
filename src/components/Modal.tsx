@@ -16,7 +16,7 @@ export default function Modal({
   title,
   children,
   maxWidth = "max-w-2xl",
-  headerColorClass = "bg-gradient-to-r from-purple-600 to-purple-700",
+  headerColorClass = "bg-linear-to-r from-purple-600 to-purple-700",
 }: ModalProps) {
   if (!isOpen) return null;
 

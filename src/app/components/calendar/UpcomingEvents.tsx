@@ -101,13 +101,13 @@ export default function UpcomingEvents() {
   const getCategoryModalHeader = (category: string) => {
     switch (category) {
       case "meeting":
-        return "bg-gradient-to-r from-blue-600 to-blue-700";
+        return "bg-linear-to-r from-blue-600 to-blue-700";
       case "deadline":
-        return "bg-gradient-to-r from-red-600 to-red-700";
+        return "bg-linear-to-r from-red-600 to-red-700";
       case "personal":
-        return "bg-gradient-to-r from-green-600 to-green-700";
+        return "bg-linear-to-r from-green-600 to-green-700";
       default:
-        return "bg-gradient-to-r from-gray-600 to-gray-700";
+        return "bg-linear-to-r from-gray-600 to-gray-700";
     }
   };
 

@@ -33,8 +33,16 @@ export default function Admin() {
   const [editingUser, setEditingUser] = useState<UserData | null>(null);
   const [editDepartment, setEditDepartment] = useState("");
   const [editPosition, setEditPosition] = useState("");
+  const [editActiveYears, setEditActiveYears] = useState<string[]>([]);
   const [editSaving, setEditSaving] = useState(false);
   const [editMessage, setEditMessage] = useState("");
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [showBulkYearModal, setShowBulkYearModal] = useState(false);
+  const [bulkYear, setBulkYear] = useState("");
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulkMessage, setBulkMessage] = useState("");
   const [selectedPhoto, setSelectedPhoto] = useState<{
     url: string;
     thumbnail: string;
@@ -184,6 +192,7 @@ export default function Admin() {
     setEditingUser(user);
     setEditDepartment(user.department || "");
     setEditPosition(user.position || "");
+    setEditActiveYears(user.activeYears || []);
     setEditMessage("");
   };
 
@@ -204,6 +213,7 @@ export default function Admin() {
           userId: editingUser.id,
           department: editDepartment,
           position: editPosition,
+          activeYears: editActiveYears,
         }),
       });
       const data = await res.json();
@@ -211,7 +221,12 @@ export default function Admin() {
         setUsers((prev) =>
           prev.map((u) =>
             u.id === editingUser.id
-              ? { ...u, department: editDepartment, position: editPosition }
+              ? {
+                  ...u,
+                  department: editDepartment,
+                  position: editPosition,
+                  activeYears: editActiveYears,
+                }
               : u,
           ),
         );
@@ -224,6 +239,51 @@ export default function Admin() {
       setEditMessage("An error occurred. Please try again.");
     } finally {
       setEditSaving(false);
+    }
+  };
+
+  const handleBulkAssignYear = async () => {
+    if (!bulkYear || selectedUserIds.size === 0) return;
+    setBulkSaving(true);
+    setBulkMessage("");
+    try {
+      // Patch each selected user — add the year to their activeYears if not already present
+      await Promise.all(
+        Array.from(selectedUserIds).map(async (userId) => {
+          const user = users.find((u) => u.id === userId);
+          if (!user) return;
+          const currentYears = user.activeYears || [];
+          if (currentYears.includes(bulkYear)) return; // already has it
+          const updatedYears = [...currentYears, bulkYear].sort();
+          return fetch("/api/admin/users", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId, activeYears: updatedYears }),
+          });
+        }),
+      );
+      // Update local state
+      setUsers((prev) =>
+        prev.map((u) => {
+          if (!selectedUserIds.has(u.id)) return u;
+          const currentYears = u.activeYears || [];
+          if (currentYears.includes(bulkYear)) return u;
+          return { ...u, activeYears: [...currentYears, bulkYear].sort() };
+        }),
+      );
+      setBulkMessage(
+        `Added ${bulkYear} to ${selectedUserIds.size} member${selectedUserIds.size !== 1 ? "s" : ""}.`,
+      );
+      setTimeout(() => {
+        setShowBulkYearModal(false);
+        setSelectedUserIds(new Set());
+        setBulkMessage("");
+        setBulkYear("");
+      }, 1500);
+    } catch {
+      setBulkMessage("Something went wrong. Please try again.");
+    } finally {
+      setBulkSaving(false);
     }
   };
 
@@ -344,11 +404,11 @@ export default function Admin() {
     <>
       {/* Date Header */}
       <div className="flex items-center justify-between mb-3 gap-2">
-        <div className="text-sm font-medium text-gray-900 break-words flex-1">
+        <div className="text-sm font-medium text-gray-900 wrap-break-word flex-1">
           {formatDate(record.date ?? "")}
         </div>
         <span
-          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full flex-shrink-0 ${
+          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full shrink-0 ${
             record.timeOut
               ? "bg-green-100 text-green-800"
               : record.timeIn
@@ -368,13 +428,13 @@ export default function Admin() {
       <div className="grid grid-cols-2 gap-3 text-sm mb-3">
         <div className="space-y-1">
           <div className="text-xs text-gray-500 mb-1">Time In</div>
-          <div className="text-sm text-gray-900 break-words">
+          <div className="text-sm text-gray-900 wrap-break-word">
             {record.timeIn ? formatTime(record.timeIn) : "-"}
           </div>
         </div>
         <div className="space-y-1">
           <div className="text-xs text-gray-500 mb-1">Time Out</div>
-          <div className="text-sm text-gray-900 break-words">
+          <div className="text-sm text-gray-900 wrap-break-word">
             {record.timeOut ? formatTime(record.timeOut) : "-"}
           </div>
         </div>
@@ -386,7 +446,7 @@ export default function Admin() {
           <div className="text-xs text-gray-500 mb-2">Photos</div>
           <div className="flex gap-2 flex-wrap">
             {record.timeInImage && (
-              <div className="text-center flex-shrink-0">
+              <div className="text-center shrink-0">
                 <Image
                   src={record.timeInImage.thumbnail}
                   alt="Time In Photo"
@@ -398,13 +458,13 @@ export default function Admin() {
                   }
                   title="Click to view Time In photo"
                 />
-                <div className="text-xs text-green-600 mt-1 break-words">
+                <div className="text-xs text-green-600 mt-1 wrap-break-word">
                   Time In
                 </div>
               </div>
             )}
             {record.timeOutImage && (
-              <div className="text-center flex-shrink-0">
+              <div className="text-center shrink-0">
                 <Image
                   src={record.timeOutImage.thumbnail}
                   alt="Time Out Photo"
@@ -416,7 +476,7 @@ export default function Admin() {
                   }
                   title="Click to view Time Out photo"
                 />
-                <div className="text-xs text-red-600 mt-1 break-words">
+                <div className="text-xs text-red-600 mt-1 wrap-break-word">
                   Time Out
                 </div>
               </div>
@@ -517,11 +577,36 @@ export default function Admin() {
   // Custom columns for complex rendering
   const userColumns: Column<UserData>[] = [
     {
+      key: "select",
+      header: "",
+      centered: true,
+      render: (user) => (
+        <input
+          type="checkbox"
+          checked={selectedUserIds.has(user.id)}
+          onChange={(e) => {
+            e.stopPropagation();
+            setSelectedUserIds((prev) => {
+              const next = new Set(prev);
+              if (next.has(user.id)) {
+                next.delete(user.id);
+              } else {
+                next.add(user.id);
+              }
+              return next;
+            });
+          }}
+          onClick={(e) => e.stopPropagation()}
+          className="w-4 h-4 accent-blue-600 cursor-pointer"
+        />
+      ),
+    },
+    {
       key: "member",
       header: "Member",
       render: (user) => (
         <div className="flex items-center">
-          <div className="flex-shrink-0 h-10 w-10">
+          <div className="shrink-0 h-10 w-10">
             {user.image ? (
               <Image
                 src={user.image}
@@ -628,7 +713,7 @@ export default function Admin() {
         {/* Member Header */}
         <div className="flex items-start justify-between mb-3 gap-3">
           <div className="flex items-start space-x-3 min-w-0 flex-1">
-            <div className="flex-shrink-0 h-12 w-12">
+            <div className="shrink-0 h-12 w-12">
               {user.image ? (
                 <Image
                   src={user.image}
@@ -646,7 +731,7 @@ export default function Admin() {
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium text-gray-900 break-words">
+              <div className="text-sm font-medium text-gray-900 wrap-break-word">
                 {user.name}
               </div>
               <div className="text-xs text-gray-500 break-all">
@@ -654,7 +739,7 @@ export default function Admin() {
               </div>
             </div>
           </div>
-          <div className="flex-shrink-0">{renderUserActions(user)}</div>
+          <div className="shrink-0">{renderUserActions(user)}</div>
         </div>
 
         {/* Member Details Grid */}
@@ -662,14 +747,14 @@ export default function Admin() {
           <div className="space-y-1">
             <div className="text-xs text-gray-500 mb-1">Department</div>
             <span
-              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${memberColors.badgeBg} ${memberColors.badgeText} break-words`}
+              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${memberColors.badgeBg} ${memberColors.badgeText} wrap-break-word`}
             >
               {user.department || "Unassigned"}
             </span>
           </div>
           <div className="space-y-1">
             <div className="text-xs text-gray-500 mb-1">Position</div>
-            <div className="text-sm text-gray-900 break-words">
+            <div className="text-sm text-gray-900 wrap-break-word">
               {user.position || "Member"}
             </div>
           </div>
@@ -687,7 +772,7 @@ export default function Admin() {
           </div>
           <div className="space-y-1">
             <div className="text-xs text-gray-500 mb-1">Last Login</div>
-            <div className="text-sm text-gray-900 break-words">
+            <div className="text-sm text-gray-900 wrap-break-word">
               {user.lastLoginTime
                 ? formatDate(user.lastLoginTime ?? "")
                 : "Never"}
@@ -701,13 +786,13 @@ export default function Admin() {
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="space-y-1">
                 <div className="text-xs text-gray-500 mb-1">Time In</div>
-                <div className="text-sm text-gray-900 break-words">
+                <div className="text-sm text-gray-900 wrap-break-word">
                   {user.timeInToday ? formatTime(user.timeInToday) : "-"}
                 </div>
               </div>
               <div className="space-y-1">
                 <div className="text-xs text-gray-500 mb-1">Time Out</div>
-                <div className="text-sm text-gray-900 break-words">
+                <div className="text-sm text-gray-900 wrap-break-word">
                   {user.timeOutToday ? (
                     formatTime(user.timeOutToday)
                   ) : user.lastLoginToday ? (
@@ -784,11 +869,11 @@ export default function Admin() {
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             {/* Header Section */}
             <div
-              className={`bg-gradient-to-r ${userColors.headerFrom} ${userColors.headerTo} px-4 sm:px-6 py-6 sm:py-8`}
+              className={`bg-linear-to-r ${userColors.headerFrom} ${userColors.headerTo} px-4 sm:px-6 py-6 sm:py-8`}
             >
               <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
                 <div className="text-white text-center sm:text-left flex-1 min-w-0">
-                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold wrap-break-word">
                     Admin Panel
                   </h1>
                   <p className="text-blue-100 text-sm sm:text-base md:text-lg">
@@ -854,6 +939,36 @@ export default function Admin() {
                 </div>
               )}
 
+              {/* Bulk action toolbar */}
+              {selectedUserIds.size > 0 && (
+                <div className="mb-4 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+                  <span className="text-sm text-blue-800 font-medium">
+                    {selectedUserIds.size} member
+                    {selectedUserIds.size !== 1 ? "s" : ""} selected
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowBulkYearModal(true);
+                        setBulkYear("");
+                        setBulkMessage("");
+                      }}
+                      className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors"
+                    >
+                      Assign School Year
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedUserIds(new Set())}
+                      className="px-3 py-1.5 border border-blue-300 text-blue-700 rounded-lg text-xs hover:bg-blue-100 transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Data Table */}
               <DataTable
                 data={users as unknown as Record<string, unknown>[]}
@@ -896,7 +1011,7 @@ export default function Admin() {
             : "Loading..."
         }
         maxWidth="max-w-4xl"
-        headerColorClass={`bg-gradient-to-r ${selectedUserColors.headerFrom} ${selectedUserColors.headerTo}`}
+        headerColorClass={`bg-linear-to-r ${selectedUserColors.headerFrom} ${selectedUserColors.headerTo}`}
       >
         {modalLoading ? (
           <div className="flex justify-center items-center py-8">
@@ -979,81 +1094,199 @@ export default function Admin() {
         />
       )}
 
+      {/* Bulk Assign School Year Modal */}
+      <Modal
+        isOpen={showBulkYearModal}
+        onClose={() => setShowBulkYearModal(false)}
+        title={`Assign School Year — ${selectedUserIds.size} member${selectedUserIds.size !== 1 ? "s" : ""}`}
+        maxWidth="max-w-sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Select a school year to add to all selected members. This won&apos;t
+            remove any years they already have.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              School Year
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {Array.from({ length: 6 }, (_, i) => {
+                const start = new Date().getFullYear() - 3 + i;
+                const year = `${start}-${start + 1}`;
+                return (
+                  <button
+                    key={year}
+                    type="button"
+                    onClick={() => setBulkYear(year)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                      bulkYear === year
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-gray-600 border-gray-300 hover:border-blue-400 hover:text-blue-600"
+                    }`}
+                  >
+                    {year}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          {bulkMessage && (
+            <p
+              className={`text-sm ${bulkMessage.includes("wrong") ? "text-red-600" : "text-green-600"}`}
+            >
+              {bulkMessage}
+            </p>
+          )}
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setShowBulkYearModal(false)}
+              className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleBulkAssignYear}
+              disabled={!bulkYear || bulkSaving}
+              className="px-5 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+            >
+              {bulkSaving ? "Assigning..." : "Assign"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Edit User Modal */}
       <Modal
         isOpen={!!editingUser}
         onClose={closeEditUser}
         title={editingUser ? `Edit — ${editingUser.name}` : ""}
         maxWidth="max-w-md"
-        headerColorClass={`bg-gradient-to-r ${getUserColorTheme(editingUser?.position, editingUser?.department).headerFrom} ${getUserColorTheme(editingUser?.position, editingUser?.department).headerTo}`}
+        headerColorClass={`bg-linear-to-r ${getUserColorTheme(editingUser?.position, editingUser?.department).headerFrom} ${getUserColorTheme(editingUser?.position, editingUser?.department).headerTo}`}
       >
-        {editingUser && (
-          <div className="space-y-5">
-            {/* Department */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Department
-              </label>
-              <select
-                value={editDepartment}
-                onChange={(e) => setEditDepartment(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              >
-                <option value="">Unassigned</option>
-                {Object.keys(DEPARTMENT_COLOR_MAP).map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept.charAt(0).toUpperCase() + dept.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
+        {editingUser &&
+          (() => {
+            // Generate a list of school years: 3 past + current + 2 future
+            const currentCalendarYear = new Date().getFullYear();
+            const schoolYears = Array.from({ length: 6 }, (_, i) => {
+              const start = currentCalendarYear - 3 + i;
+              return `${start}-${start + 1}`;
+            });
 
-            {/* Position */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Position
-              </label>
-              <select
-                value={editPosition}
-                onChange={(e) => setEditPosition(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              >
-                <option value="">Member</option>
-                {Object.keys(POSITION_COLOR_MAP).map((pos) => (
-                  <option key={pos} value={pos}>
-                    {pos.charAt(0).toUpperCase() + pos.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            const toggleYear = (year: string) => {
+              setEditActiveYears((prev) =>
+                prev.includes(year)
+                  ? prev.filter((y) => y !== year)
+                  : [...prev, year].sort(),
+              );
+            };
 
-            {editMessage && (
-              <p
-                className={`text-sm ${editMessage.includes("success") ? "text-green-600" : "text-red-600"}`}
-              >
-                {editMessage}
-              </p>
-            )}
+            return (
+              <div className="space-y-5">
+                {/* Department */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Department
+                  </label>
+                  <select
+                    value={editDepartment}
+                    onChange={(e) => setEditDepartment(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    <option value="">Unassigned</option>
+                    {Object.keys(DEPARTMENT_COLOR_MAP).map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept.charAt(0).toUpperCase() + dept.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            <div className="flex justify-end gap-2 pt-1">
-              <button
-                type="button"
-                onClick={closeEditUser}
-                className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveEdit}
-                disabled={editSaving}
-                className="px-5 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
-              >
-                {editSaving ? "Saving..." : "Save changes"}
-              </button>
-            </div>
-          </div>
-        )}
+                {/* Position */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Position
+                  </label>
+                  <select
+                    value={editPosition}
+                    onChange={(e) => setEditPosition(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    <option value="">Member</option>
+                    {Object.keys(POSITION_COLOR_MAP).map((pos) => (
+                      <option key={pos} value={pos}>
+                        {pos.charAt(0).toUpperCase() + pos.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Active School Years */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Active School Years
+                  </label>
+                  <p className="text-xs text-gray-400 mb-2">
+                    Select every year this member is/was active. Used to filter
+                    yearbook pulls.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {schoolYears.map((year) => {
+                      const active = editActiveYears.includes(year);
+                      return (
+                        <button
+                          key={year}
+                          type="button"
+                          onClick={() => toggleYear(year)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                            active
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-white text-gray-600 border-gray-300 hover:border-blue-400 hover:text-blue-600"
+                          }`}
+                        >
+                          {year}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {editActiveYears.length === 0 && (
+                    <p className="text-xs text-amber-500 mt-1">
+                      No years selected — this member won&apos;t appear in any
+                      yearbook pull.
+                    </p>
+                  )}
+                </div>
+
+                {editMessage && (
+                  <p
+                    className={`text-sm ${editMessage.includes("success") ? "text-green-600" : "text-red-600"}`}
+                  >
+                    {editMessage}
+                  </p>
+                )}
+
+                <div className="flex justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={closeEditUser}
+                    className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveEdit}
+                    disabled={editSaving}
+                    className="px-5 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+                  >
+                    {editSaving ? "Saving..." : "Save changes"}
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
       </Modal>
     </>
   );

@@ -8,10 +8,11 @@ import { getUserColorKey } from "@/lib/colorConfig";
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "PATCH") {
-    const { userId, department, position } = req.body as {
+    const { userId, department, position, activeYears } = req.body as {
       userId?: string;
       department?: string;
       position?: string;
+      activeYears?: string[];
     };
 
     if (!userId) {
@@ -22,12 +23,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const client = await clientPromise;
       const db = client.db("meraki");
 
-      const updateFields: Record<string, string> = {};
+      const updateFields: Record<string, unknown> = {};
       if (department !== undefined) updateFields.department = department;
       if (position !== undefined) {
         updateFields.position = position;
-        // Recalculate color when position changes
         updateFields.color = getUserColorKey(position, department);
+      }
+      if (activeYears !== undefined) {
+        updateFields.activeYears = activeYears;
       }
 
       if (Object.keys(updateFields).length === 0) {
@@ -165,6 +168,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         department: user.department || "Unassigned",
         position: user.position || "Member",
         color: user.color || "blue",
+        activeYears: user.activeYears || [],
         createdAt: user.createdAt,
         lastLoginToday: todayAttendanceMap.has(user.email),
         lastLoginTime: lastLogin ?? undefined,

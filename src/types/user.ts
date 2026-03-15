@@ -1,5 +1,5 @@
 export interface UserProfile {
-  _id?: { toString(): string}
+  _id?: { toString(): string };
   id: string;
   name: string;
   email: string;
@@ -8,6 +8,7 @@ export interface UserProfile {
   department?: string;
   position?: string;
   color?: string;
+  activeYears?: string[];
   createdAt: string;
 }
 
@@ -20,6 +21,7 @@ export interface UserData {
   department?: string;
   position?: string;
   color?: string;
+  activeYears?: string[];
   createdAt: string;
   lastLogin?: boolean;
   lastLoginTime?: string;

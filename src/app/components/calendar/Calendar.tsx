@@ -15,7 +15,7 @@ export default function Calendar() {
   const [userProfile, setUserProfile] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
-    null
+    null,
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState<EventFormData>({
@@ -120,13 +120,13 @@ export default function Calendar() {
   const getCategoryModalHeader = (category: string) => {
     switch (category) {
       case "meeting":
-        return "bg-gradient-to-r from-blue-600 to-blue-700";
+        return "bg-linear-to-r from-blue-600 to-blue-700";
       case "deadline":
-        return "bg-gradient-to-r from-red-600 to-red-700";
+        return "bg-linear-to-r from-red-600 to-red-700";
       case "personal":
-        return "bg-gradient-to-r from-green-600 to-green-700";
+        return "bg-linear-to-r from-green-600 to-green-700";
       default:
-        return "bg-gradient-to-r from-gray-600 to-gray-700";
+        return "bg-linear-to-r from-gray-600 to-gray-700";
     }
   };
 
@@ -201,7 +201,7 @@ export default function Calendar() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-200 flex justify-center items-center px-4">
+      <div className="min-h-screen bg-linear-to-br from-gray-100 to-blue-200 flex justify-center items-center px-4">
         <div className="bg-white p-6 sm:p-8 rounded-lg shadow-lg max-w-sm w-full">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="text-center mt-4 text-gray-600 text-sm sm:text-base">
@@ -214,20 +214,20 @@ export default function Calendar() {
 
   const userColors = getUserColorTheme(
     userProfile?.position,
-    userProfile?.department
+    userProfile?.department,
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-200 py-4 sm:py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-linear-to-br from-gray-100 to-blue-200 py-4 sm:py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           {/* Header Section */}
           <div
-            className={`bg-gradient-to-r ${userColors.headerFrom} ${userColors.headerTo} px-4 sm:px-6 py-6 sm:py-8`}
+            className={`bg-linear-to-r ${userColors.headerFrom} ${userColors.headerTo} px-4 sm:px-6 py-6 sm:py-8`}
           >
             <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
               <div className="text-white text-center sm:text-left flex-1 min-w-0">
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold wrap-break-word">
                   Calendar
                 </h1>
                 <p className="text-blue-100 text-sm sm:text-base md:text-lg">
@@ -307,7 +307,7 @@ export default function Calendar() {
                     key={event.id}
                     onClick={() => handleEventClick(event)}
                     className={`bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 border-l-4 ${getCategoryColor(
-                      event.category!
+                      event.category!,
                     )} overflow-hidden cursor-pointer`}
                   >
                     {/* Card Header */}
@@ -316,14 +316,14 @@ export default function Calendar() {
                         <div className="flex items-center space-x-2">
                           <div
                             className={`p-2 rounded-full ${getCategoryBadge(
-                              event.category!
+                              event.category!,
                             )}`}
                           >
                             {getCategoryIcon(event.category!)}
                           </div>
                           <span
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryBadge(
-                              event.category!
+                              event.category!,
                             )}`}
                           >
                             {event.category!.charAt(0).toUpperCase() +
@@ -357,13 +357,13 @@ export default function Calendar() {
                       </div>
 
                       {/* Event Title */}
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2 break-words">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2 wrap-break-word">
                         {event.title}
                       </h3>
 
                       {/* Event Description */}
                       {event.description && (
-                        <p className="text-sm text-gray-600 mb-4 break-words line-clamp-3">
+                        <p className="text-sm text-gray-600 mb-4 wrap-break-word line-clamp-3">
                           {event.description}
                         </p>
                       )}
@@ -422,7 +422,7 @@ export default function Calendar() {
         onClose={() => setShowForm(false)}
         title="Add New Event"
         maxWidth="max-w-md"
-        headerColorClass={`bg-gradient-to-r ${userColors.headerFrom} ${userColors.headerTo}`}
+        headerColorClass={`bg-linear-to-r ${userColors.headerFrom} ${userColors.headerTo}`}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -542,7 +542,7 @@ export default function Calendar() {
         title={selectedEvent?.title || "Event Details"}
         maxWidth="max-w-lg"
         headerColorClass={getCategoryModalHeader(
-          selectedEvent?.category || "other"
+          selectedEvent?.category || "other",
         )}
       >
         {selectedEvent && (
@@ -566,7 +566,7 @@ export default function Calendar() {
               <h3 className="font-semibold text-gray-900 mb-1">Category</h3>
               <span
                 className={`inline-block text-xs px-2 py-1 rounded ${getCategoryBadge(
-                  selectedEvent.category || "other"
+                  selectedEvent.category || "other",
                 )}`}
               >
                 {selectedEvent.category
@@ -594,7 +594,7 @@ export default function Calendar() {
                 <h3 className="font-semibold text-gray-900 mb-1">
                   Description
                 </h3>
-                <p className="text-gray-700 whitespace-pre-wrap break-words">
+                <p className="text-gray-700 whitespace-pre-wrap wrap-break-word">
                   {selectedEvent.description}
                 </p>
               </div>

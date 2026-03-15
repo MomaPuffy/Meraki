@@ -78,15 +78,15 @@ export default function UnifiedImageViewer(props: ImageViewerProps) {
                 !props.isAuthenticated
                   ? "opacity-50 cursor-not-allowed"
                   : props.isLiked
-                  ? "bg-red-500 hover:bg-red-600"
-                  : "bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+                    ? "bg-red-500 hover:bg-red-600"
+                    : "bg-white/20 hover:bg-white/30 backdrop-blur-sm"
               }`}
               title={
                 !props.isAuthenticated
                   ? "Please log in to like items"
                   : props.isLiked
-                  ? "Unlike"
-                  : "Like"
+                    ? "Unlike"
+                    : "Like"
               }
             >
               {props.isLiked ? (
@@ -177,7 +177,7 @@ export default function UnifiedImageViewer(props: ImageViewerProps) {
         </div>
 
         {/* Image info overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 rounded-b-lg">
+        <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-6 rounded-b-lg">
           <div className="flex items-end justify-between text-white">
             <div>
               <h3 className="text-xl font-semibold mb-1">{title}</h3>
@@ -205,7 +205,7 @@ export const createGalleryViewerProps = (
   isAuthenticated: boolean,
   isAdmin?: boolean,
   onDelete?: (itemId: string) => void,
-  isDeleting?: boolean
+  isDeleting?: boolean,
 ): ImageViewerProps => ({
   ...baseProps,
   type: "gallery",
@@ -220,7 +220,7 @@ export const createGalleryViewerProps = (
 
 export const createAttendanceViewerProps = (
   baseProps: BaseImageViewerProps,
-  photo: AttendanceProps["photo"]
+  photo: AttendanceProps["photo"],
 ): ImageViewerProps => ({
   ...baseProps,
   type: "attendance",
@@ -229,7 +229,7 @@ export const createAttendanceViewerProps = (
 
 export const createBasicViewerProps = (
   baseProps: BaseImageViewerProps,
-  children?: React.ReactNode
+  children?: React.ReactNode,
 ): ImageViewerProps => ({
   ...baseProps,
   type: "basic",

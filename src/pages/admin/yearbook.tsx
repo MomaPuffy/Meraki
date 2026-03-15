@@ -74,7 +74,7 @@ function MemberEditor({
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="flex-shrink-0 w-16 h-16 rounded-full bg-purple-100 border-2 border-dashed border-purple-300 flex items-center justify-center overflow-hidden hover:bg-purple-50 transition-colors"
+          className="shrink-0 w-16 h-16 rounded-full bg-purple-100 border-2 border-dashed border-purple-300 flex items-center justify-center overflow-hidden hover:bg-purple-50 transition-colors"
           title="Upload photo"
         >
           {uploading ? (
@@ -147,6 +147,7 @@ function DeptEditor({
   isFirst,
   isLast,
   allUsers,
+  yearbookYear,
 }: {
   dept: YearbookDepartment;
   onChange: (d: YearbookDepartment) => void;
@@ -161,17 +162,27 @@ function DeptEditor({
     position?: string;
     image?: string;
     department?: string;
+    activeYears?: string[];
   }[];
+  yearbookYear: string;
 }) {
   const [uploadingActivity, setUploadingActivity] = useState(false);
   const [deptOpen, setDeptOpen] = useState(true);
   const activityRef = useRef<HTMLInputElement>(null);
 
   // Users whose department matches this dept name (case-insensitive)
-  const matchingUsers = allUsers.filter(
-    (u) =>
-      u.department?.toLowerCase().trim() === dept.name.toLowerCase().trim(),
-  );
+  // AND who have this yearbook's year in their activeYears.
+  // If a user has no activeYears set yet, fall back to matching by department only
+  // so admins aren't locked out during a transition period.
+  const matchingUsers = allUsers.filter((u) => {
+    const deptMatch =
+      u.department?.toLowerCase().trim() === dept.name.toLowerCase().trim();
+    if (!deptMatch) return false;
+    // If the user has no activeYears set yet, include them as a fallback
+    // so admins can still pull before years are assigned
+    if (!u.activeYears || u.activeYears.length === 0) return true;
+    return u.activeYears.includes(yearbookYear);
+  });
 
   // IDs of users already in the member list (by name match as fallback)
   const existingNames = new Set(
@@ -234,9 +245,9 @@ function DeptEditor({
   return (
     <div className="bg-white rounded-2xl shadow-md border border-purple-100 overflow-hidden mb-6">
       {/* Dept header */}
-      <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-5 py-4 flex items-center gap-3 border-b border-purple-100">
+      <div className="bg-linear-to-r from-purple-50 to-pink-50 px-5 py-4 flex items-center gap-3 border-b border-purple-100">
         {/* Reorder buttons */}
-        <div className="flex flex-col gap-0.5 flex-shrink-0">
+        <div className="flex flex-col gap-0.5 shrink-0">
           <button
             type="button"
             onClick={onMoveUp}
@@ -263,13 +274,13 @@ function DeptEditor({
           onChange={(e) => onChange({ ...dept, name: e.target.value })}
           className="flex-1 bg-transparent border-b border-purple-300 text-purple-800 font-semibold text-lg focus:outline-none focus:border-purple-600 placeholder-purple-300"
         />
-        <span className="text-xs text-gray-400 flex-shrink-0">
+        <span className="text-xs text-gray-400 shrink-0">
           {dept.members.length} members
         </span>
         <button
           type="button"
           onClick={() => setDeptOpen((o) => !o)}
-          className="text-purple-400 hover:text-purple-700 transition-colors text-sm flex-shrink-0 w-6 text-center"
+          className="text-purple-400 hover:text-purple-700 transition-colors text-sm shrink-0 w-6 text-center"
           title={deptOpen ? "Collapse" : "Expand"}
         >
           {deptOpen ? "▾" : "▸"}
@@ -277,7 +288,7 @@ function DeptEditor({
         <button
           type="button"
           onClick={onRemove}
-          className="text-red-400 hover:text-red-600 text-sm font-medium flex-shrink-0"
+          className="text-red-400 hover:text-red-600 text-sm font-medium shrink-0"
         >
           Remove
         </button>
@@ -398,6 +409,7 @@ function YearbookEditor({
       position?: string;
       image?: string;
       department?: string;
+      activeYears?: string[];
     }[]
   >([]);
   const coverRef = useRef<HTMLInputElement>(null);
@@ -505,13 +517,13 @@ function YearbookEditor({
 
       {/* Cover photo */}
       <div className="bg-white rounded-2xl shadow-md border border-purple-100 overflow-hidden">
-        <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-5 py-4 border-b border-purple-100">
+        <div className="bg-linear-to-r from-purple-50 to-pink-50 px-5 py-4 border-b border-purple-100">
           <span className="font-semibold text-purple-800 text-lg">
             Cover Photo
           </span>
         </div>
         <div className="p-5 flex items-center gap-5">
-          <div className="w-32 h-24 rounded-xl overflow-hidden bg-gray-100 border-2 border-dashed border-purple-200 flex items-center justify-center flex-shrink-0">
+          <div className="w-32 h-24 rounded-xl overflow-hidden bg-gray-100 border-2 border-dashed border-purple-200 flex items-center justify-center shrink-0">
             {coverPhoto ? (
               <Image
                 src={coverPhoto}
@@ -572,6 +584,7 @@ function YearbookEditor({
           isFirst={i === 0}
           isLast={i === departments.length - 1}
           allUsers={allUsers}
+          yearbookYear={yearbook.year}
         />
       ))}
 
@@ -735,7 +748,7 @@ export default function AdminYearbook() {
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-8">
           <div
-            className={`bg-gradient-to-r ${userColors.headerFrom} ${userColors.headerTo} px-6 py-8`}
+            className={`bg-linear-to-r ${userColors.headerFrom} ${userColors.headerTo} px-6 py-8`}
           >
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
@@ -776,7 +789,7 @@ export default function AdminYearbook() {
               <div className="flex flex-col gap-2">
                 <input
                   type="text"
-                  placeholder="Year (e.g. 2025)"
+                  placeholder="Year (e.g. 2025-2026)"
                   value={newYear}
                   onChange={(e) => setNewYear(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleCreate()}

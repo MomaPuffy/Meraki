@@ -53,7 +53,7 @@ function Lightbox({
 function MemberCard({ member }: { member: YearbookMember }) {
   return (
     <div className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col items-center p-5 gap-3 border border-purple-100 hover:shadow-lg transition-shadow">
-      <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-purple-200 bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center flex-shrink-0">
+      <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-purple-200 bg-linear-to-br from-purple-100 to-pink-100 flex items-center justify-center shrink-0">
         {member.photo ? (
           <Image
             src={member.photo}
@@ -138,11 +138,11 @@ function DepartmentSection({ dept }: { dept: YearbookDepartment }) {
     <section className="mb-16">
       {/* Dept header */}
       <div className="flex items-center gap-4 mb-8">
-        <div className="flex-1 h-px bg-gradient-to-r from-purple-300 to-transparent" />
+        <div className="flex-1 h-px bg-linear-to-r from-purple-300 to-transparent" />
         <h3 className="text-2xl font-bold text-purple-700 px-4 py-1 bg-purple-50 rounded-full border border-purple-200 whitespace-nowrap">
           {dept.name}
         </h3>
-        <div className="flex-1 h-px bg-gradient-to-l from-purple-300 to-transparent" />
+        <div className="flex-1 h-px bg-linear-to-l from-purple-300 to-transparent" />
       </div>
 
       {/* Members grid */}
@@ -232,9 +232,9 @@ export default function YearbookYear() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white">
+    <div className="min-h-screen bg-linear-to-b from-purple-50 to-white">
       {/* Cover */}
-      <div className="bg-gradient-to-br from-purple-700 via-purple-600 to-pink-600 text-white py-20 px-6 text-center relative overflow-hidden">
+      <div className="bg-linear-to-br from-purple-700 via-purple-600 to-pink-600 text-white py-20 px-6 text-center relative overflow-hidden">
         {/* Decorative blobs */}
         <div className="absolute top-0 left-0 w-64 h-64 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/5 rounded-full translate-x-1/3 translate-y-1/3" />
