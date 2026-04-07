@@ -174,7 +174,7 @@ export default function YearbookYear() {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    if (!year || !session) return;
+    if (!year) return;
     setLoading(true);
     fetch(`/api/yearbook/${year}`)
       .then((r) => {
@@ -199,15 +199,15 @@ export default function YearbookYear() {
     );
   }
 
-  if (!session) {
-    return (
-      <div className="min-h-screen flex justify-center items-center px-4">
-        <div className="bg-white p-8 rounded-lg shadow-lg text-center max-w-md">
-          <p className="text-gray-600">Please sign in to view the yearbook.</p>
-        </div>
-      </div>
-    );
-  }
+  // if (!session) {
+  //   return (
+  //     <div className="min-h-screen flex justify-center items-center px-4">
+  //       <div className="bg-white p-8 rounded-lg shadow-lg text-center max-w-md">
+  //         <p className="text-gray-600">Please sign in to view the yearbook.</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   if (notFound || !yearbook) {
     return (

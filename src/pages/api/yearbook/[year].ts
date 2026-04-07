@@ -9,9 +9,6 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
-  const session = await getServerSession(req, res, authOptions);
-  if (!session) return res.status(401).json({ message: "Unauthorized" });
-
   const { year } = req.query;
   if (!year || typeof year !== "string") {
     return res.status(400).json({ message: "Year is required" });
@@ -21,6 +18,7 @@ export default async function handler(
   const db = client.db("meraki");
   const col = db.collection("yearbooks");
 
+  // Allow public GET
   if (req.method === "GET") {
     const yearbook = await col.findOne({ year });
     if (!yearbook)
@@ -28,7 +26,10 @@ export default async function handler(
     return res.status(200).json({ yearbook });
   }
 
-  // Write operations require admin
+  // Non-GET methods require auth + admin
+  const session = await getServerSession(req, res, authOptions);
+  if (!session) return res.status(401).json({ message: "Unauthorized" });
+
   const profileCol = db.collection("users");
   const user = await profileCol.findOne({ email: session.user?.email });
   if (!isAdminPosition(user?.position)) {

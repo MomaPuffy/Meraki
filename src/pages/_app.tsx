@@ -18,6 +18,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     "/register",
     "/forgot-password",
     "/public",
+    "/yearbook",
+    "/yearbook/[year]",
   ];
   const isPublicRoute =
     publicRoutes.includes(router.pathname) ||

@@ -11,15 +11,12 @@ export default function YearbookIndex() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (session) {
-      fetch("/api/yearbook")
-        .then((r) => r.json())
-        .then((data) => setYearbooks(data.yearbooks || []))
-        .catch(console.error)
-        .finally(() => setLoading(false));
-    } else if (status !== "loading") {
-      setLoading(false);
-    }
+    // Allow public fetch of yearbooks; admin-only actions are behind isAdminPosition
+    fetch("/api/yearbook")
+      .then((r) => r.json())
+      .then((data) => setYearbooks(data.yearbooks || []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, [session, status]);
 
   if (status === "loading" || loading) {
@@ -30,16 +27,16 @@ export default function YearbookIndex() {
     );
   }
 
-  if (!session) {
-    return (
-      <div className="min-h-screen flex justify-center items-center px-4">
-        <div className="bg-white p-8 rounded-lg shadow-lg text-center max-w-md w-full">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Yearbook</h1>
-          <p className="text-gray-600">Please sign in to view the yearbook.</p>
-        </div>
-      </div>
-    );
-  }
+  // if (!session) {
+  //   return (
+  //     <div className="min-h-screen flex justify-center items-center px-4">
+  //       <div className="bg-white p-8 rounded-lg shadow-lg text-center max-w-md w-full">
+  //         <h1 className="text-2xl font-bold text-gray-900 mb-4">Yearbook</h1>
+  //         <p className="text-gray-600">Please sign in to view the yearbook.</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
@@ -62,7 +59,7 @@ export default function YearbookIndex() {
             <p className="text-purple-100 text-lg">
               Memories, moments, and milestones
             </p>
-            {isAdminPosition(session.user.position) && (
+            {session && isAdminPosition(session!.user.position) && (
               <Link
                 href="/admin/yearbook"
                 className="mt-4 inline-block bg-white text-purple-600 font-bold py-2 px-4 rounded-lg hover:bg-gray-100 transition-colors"

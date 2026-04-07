@@ -8,6 +8,16 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
+  // Allow public read (GET) requests
+  if (req.method === "GET") {
+    const client = await clientPromise;
+    const db = client.db("meraki");
+    const col = db.collection("yearbooks");
+    const yearbooks = await col.find({}).sort({ year: -1 }).toArray();
+    return res.status(200).json({ yearbooks });
+  }
+
+  // For non-GET methods require authentication + admin
   const session = await getServerSession(req, res, authOptions);
   if (!session) return res.status(401).json({ message: "Unauthorized" });
 
@@ -15,12 +25,6 @@ export default async function handler(
   const db = client.db("meraki");
   const col = db.collection("yearbooks");
 
-  if (req.method === "GET") {
-    const yearbooks = await col.find({}).sort({ year: -1 }).toArray();
-    return res.status(200).json({ yearbooks });
-  }
-
-  // Write operations require admin
   const profileCol = db.collection("users");
   const user = await profileCol.findOne({ email: session.user?.email });
   if (!isAdminPosition(user?.position)) {
