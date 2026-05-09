@@ -4,7 +4,7 @@ import { formatTimeForDisplay, formatDateForDisplay } from "@/utils/dateUtils";
 
 export interface Column<T> {
   key: string;
-  header: string;
+  header: ReactNode;
   render?: (item: T) => ReactNode;
   sortable?: boolean;
   centered?: boolean;
@@ -47,6 +47,7 @@ interface DataTableProps<T> {
   computedFilters?: {
     [key: string]: (item: T) => string | boolean | number;
   };
+  onVisibleDataChange?: (visibleData: T[]) => void;
 }
 
 export default function DataTable<T extends object>({
@@ -70,6 +71,7 @@ export default function DataTable<T extends object>({
   timeFields = [],
   statusFields = [],
   computedFilters = {},
+  onVisibleDataChange,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -360,6 +362,10 @@ export default function DataTable<T extends object>({
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedData = filteredData.slice(startIndex, endIndex);
+
+  useEffect(() => {
+    onVisibleDataChange?.(paginatedData);
+  }, [paginatedData, onVisibleDataChange]);
 
   // Reset to first page when filters change
   useEffect(() => {

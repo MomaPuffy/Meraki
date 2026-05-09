@@ -19,6 +19,10 @@ function emptyDept(): YearbookDepartment {
   return { id: uid(), name: "", members: [], activityPhotos: [] };
 }
 
+function normalizeDepartmentName(name: string) {
+  return name.trim().toLowerCase();
+}
+
 // ── Image upload helper ──────────────────────────────────────────────────────
 async function uploadToCloudinary(file: File): Promise<string> {
   const toBase64 = (f: File): Promise<string> =>
@@ -147,6 +151,7 @@ function DeptEditor({
   isFirst,
   isLast,
   allUsers,
+  departmentOptions,
   yearbookYear,
 }: {
   dept: YearbookDepartment;
@@ -164,6 +169,7 @@ function DeptEditor({
     department?: string;
     activeYears?: string[];
   }[];
+  departmentOptions: string[];
   yearbookYear: string;
 }) {
   const [uploadingActivity, setUploadingActivity] = useState(false);
@@ -176,7 +182,8 @@ function DeptEditor({
   // so admins aren't locked out during a transition period.
   const matchingUsers = allUsers.filter((u) => {
     const deptMatch =
-      u.department?.toLowerCase().trim() === dept.name.toLowerCase().trim();
+      normalizeDepartmentName(u.department || "") ===
+      normalizeDepartmentName(dept.name);
     if (!deptMatch) return false;
     // If the user has no activeYears set yet, include them as a fallback
     // so admins can still pull before years are assigned
@@ -267,13 +274,20 @@ function DeptEditor({
             ▼
           </button>
         </div>
-        <input
-          type="text"
-          placeholder="Department name *"
+        <select
           value={dept.name}
           onChange={(e) => onChange({ ...dept, name: e.target.value })}
-          className="flex-1 bg-transparent border-b border-purple-300 text-purple-800 font-semibold text-lg focus:outline-none focus:border-purple-600 placeholder-purple-300"
-        />
+          className="flex-1 bg-transparent border-b border-purple-300 text-purple-800 font-semibold text-lg focus:outline-none focus:border-purple-600"
+        >
+          <option value="" disabled>
+            Select department *
+          </option>
+          {departmentOptions.map((department) => (
+            <option key={department} value={department}>
+              {department}
+            </option>
+          ))}
+        </select>
         <span className="text-xs text-gray-400 shrink-0">
           {dept.members.length} members
         </span>
@@ -413,6 +427,26 @@ function YearbookEditor({
     }[]
   >([]);
   const coverRef = useRef<HTMLInputElement>(null);
+
+  const usedDepartmentNames = new Set(
+    departments.map((department) => normalizeDepartmentName(department.name)),
+  );
+
+  const departmentOptions = Array.from(
+    new Set(
+      allUsers
+        .map((user) => user.department?.trim())
+        .filter((department): department is string => Boolean(department))
+        .filter(
+          (department) => normalizeDepartmentName(department) !== "unassigned",
+        ),
+    ),
+  )
+    .filter((department) => {
+      const normalized = normalizeDepartmentName(department);
+      return !usedDepartmentNames.has(normalized);
+    })
+    .sort((a, b) => a.localeCompare(b));
 
   useEffect(() => {
     fetch("/api/admin/users")
@@ -584,6 +618,18 @@ function YearbookEditor({
           isFirst={i === 0}
           isLast={i === departments.length - 1}
           allUsers={allUsers}
+          departmentOptions={
+            dept.name
+              ? [
+                  dept.name,
+                  ...departmentOptions.filter(
+                    (department) =>
+                      normalizeDepartmentName(department) !==
+                      normalizeDepartmentName(dept.name),
+                  ),
+                ]
+              : departmentOptions
+          }
           yearbookYear={yearbook.year}
         />
       ))}
@@ -591,10 +637,16 @@ function YearbookEditor({
       <button
         type="button"
         onClick={addDept}
+        disabled={departmentOptions.length === 0}
         className="w-full py-3 border-2 border-dashed border-purple-300 rounded-2xl text-purple-600 hover:bg-purple-50 transition-colors text-sm font-medium"
       >
         + Add department
       </button>
+      {departmentOptions.length === 0 && (
+        <p className="text-xs text-gray-400 text-center">
+          All available departments are already included in this yearbook.
+        </p>
+      )}
 
       <div className="flex justify-end gap-2 pt-2">
         <button

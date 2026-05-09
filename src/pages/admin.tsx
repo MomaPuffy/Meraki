@@ -39,6 +39,7 @@ export default function Admin() {
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(
     new Set(),
   );
+  const [visibleUsers, setVisibleUsers] = useState<UserData[]>([]);
   const [showBulkYearModal, setShowBulkYearModal] = useState(false);
   const [bulkYear, setBulkYear] = useState("");
   const [bulkSaving, setBulkSaving] = useState(false);
@@ -574,11 +575,50 @@ export default function Admin() {
     </div>
   );
 
+  const selectedVisibleCount = visibleUsers.filter((user) =>
+    selectedUserIds.has(user.id),
+  ).length;
+  const allVisibleSelected =
+    visibleUsers.length > 0 && selectedVisibleCount === visibleUsers.length;
+  const someVisibleSelected =
+    selectedVisibleCount > 0 && selectedVisibleCount < visibleUsers.length;
+
+  const handleToggleSelectVisible = (shouldSelect: boolean) => {
+    if (visibleUsers.length === 0) return;
+    setSelectedUserIds((prev) => {
+      const next = new Set(prev);
+      visibleUsers.forEach((user) => {
+        if (shouldSelect) {
+          next.add(user.id);
+        } else {
+          next.delete(user.id);
+        }
+      });
+      return next;
+    });
+  };
+
   // Custom columns for complex rendering
   const userColumns: Column<UserData>[] = [
     {
       key: "select",
-      header: "",
+      header: (
+        <div className="flex justify-center" title="Select all rows in view">
+          <input
+            type="checkbox"
+            checked={allVisibleSelected}
+            ref={(el) => {
+              if (el) {
+                el.indeterminate = someVisibleSelected;
+              }
+            }}
+            onChange={(e) => handleToggleSelectVisible(e.target.checked)}
+            disabled={visibleUsers.length === 0}
+            className="w-4 h-4 accent-blue-600 cursor-pointer disabled:cursor-not-allowed"
+            aria-label="Select all rows in current view"
+          />
+        </div>
+      ),
       centered: true,
       render: (user) => (
         <input
@@ -939,7 +979,6 @@ export default function Admin() {
                 </div>
               )}
 
-              {/* Bulk action toolbar */}
               {selectedUserIds.size > 0 && (
                 <div className="mb-4 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
                   <span className="text-sm text-blue-800 font-medium">
@@ -995,6 +1034,9 @@ export default function Admin() {
                 }
                 emptyMessage="No members found matching your criteria."
                 loading={loading}
+                onVisibleDataChange={(items) =>
+                  setVisibleUsers(items as unknown as UserData[])
+                }
               />
             </div>
           </div>
