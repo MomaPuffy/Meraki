@@ -71,39 +71,53 @@ function MemberEditor({
     }
   };
 
+  const removePhoto = () => {
+    onChange({ ...member, photo: "" });
+  };
+
   return (
     <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-3">
       <div className="flex items-start gap-3">
-        {/* Photo */}
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          className="shrink-0 w-16 h-16 rounded-full bg-purple-100 border-2 border-dashed border-purple-300 flex items-center justify-center overflow-hidden hover:bg-purple-50 transition-colors"
-          title="Upload photo"
-        >
-          {uploading ? (
-            <div className="animate-spin w-5 h-5 border-b-2 border-purple-600 rounded-full" />
-          ) : member.photo ? (
-            <Image
-              src={member.photo}
-              alt={member.name}
-              width={64}
-              height={64}
-              className="object-cover w-full h-full"
-            />
-          ) : (
-            <span className="text-purple-400 text-xs text-center leading-tight px-1">
-              Add photo
-            </span>
+        <div className="shrink-0 flex flex-col items-center gap-1">
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="w-16 h-16 rounded-full bg-purple-100 border-2 border-dashed border-purple-300 flex items-center justify-center overflow-hidden hover:bg-purple-50 transition-colors"
+            title="Upload photo"
+          >
+            {uploading ? (
+              <div className="animate-spin w-5 h-5 border-b-2 border-purple-600 rounded-full" />
+            ) : member.photo ? (
+              <Image
+                src={member.photo}
+                alt={member.name}
+                width={64}
+                height={64}
+                className="object-cover w-full h-full"
+              />
+            ) : (
+              <span className="text-purple-400 text-xs text-center leading-tight px-1">
+                Add photo
+              </span>
+            )}
+          </button>
+          {member.photo && !uploading && (
+            <button
+              type="button"
+              onClick={removePhoto}
+              className="text-[11px] text-red-400 hover:text-red-600 transition-colors"
+            >
+              Remove photo
+            </button>
           )}
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handlePhoto}
-        />
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePhoto}
+          />
+        </div>
 
         <div className="flex-1 space-y-2">
           <input
