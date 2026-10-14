@@ -17,6 +17,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     "/login",
     "/register",
     "/forgot-password",
+    "/reset-password",
     "/public",
     "/yearbook",
     "/yearbook/[year]",

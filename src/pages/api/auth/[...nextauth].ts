@@ -59,11 +59,12 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
+          const email = credentials.email.trim().toLowerCase();
           const client = await clientPromise;
           const db = client.db("meraki");
           const user = await db
             .collection("users")
-            .findOne({ email: credentials.email });
+            .findOne({ email }, { collation: { locale: "en", strength: 2 } });
 
           if (!user) {
             return null;
@@ -72,20 +73,20 @@ export const authOptions: NextAuthOptions = {
           // Check if user signed up with Google
           if (user.provider === "google") {
             throw new Error(
-              "This email is associated with a Google account. Please sign in with Google."
+              "This email is associated with a Google account. Please sign in with Google.",
             );
           }
 
           // Check if user has a password (credentials-based account)
           if (!user.password) {
             throw new Error(
-              "This account was created with Google. Please sign in with Google."
+              "This account was created with Google. Please sign in with Google.",
             );
           }
 
           const isPasswordValid = await bcrypt.compare(
             credentials.password,
-            user.password
+            user.password,
           );
 
           if (!isPasswordValid) {

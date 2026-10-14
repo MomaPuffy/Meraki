@@ -5,10 +5,7 @@ import crypto from "crypto";
 import nodemailer from "nodemailer";
 import { withAdminAuth } from "@/utils/withAuth";
 
-async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method not allowed" });
   }
@@ -44,7 +41,7 @@ async function handler(
           resetToken,
           resetTokenExpiry,
         },
-      }
+      },
     );
 
     // Send reset email
@@ -54,7 +51,7 @@ async function handler(
       secure: false,
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        pass: process.env.EMAIL_PASS?.replace(/\s/g, ""),
       },
     });
 

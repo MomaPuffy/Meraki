@@ -11,13 +11,15 @@ import {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
 ) {
   if (req.method !== "POST") {
     return methodNotAllowed(res);
   }
 
-  const { name, email, password, department, position } = req.body;
+  const { name, email: rawEmail, password, department, position } = req.body;
+  const email =
+    typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
 
   if (!name || !email || !password) {
     return badRequest(res, "Missing required fields");
@@ -32,14 +34,16 @@ export default async function handler(
     const db = client.db("meraki");
 
     // Check if user already exists
-    const existingUser = await db.collection("users").findOne({ email });
+    const existingUser = await db
+      .collection("users")
+      .findOne({ email }, { collation: { locale: "en", strength: 2 } });
 
     if (existingUser) {
       // Check if the user was created via Google OAuth
       if (existingUser.provider === "google") {
         return badRequest(
           res,
-          "An account with this email already exists. Please sign in with Google."
+          "An account with this email already exists. Please sign in with Google.",
         );
       } else {
         return badRequest(res, "User already exists with this email");

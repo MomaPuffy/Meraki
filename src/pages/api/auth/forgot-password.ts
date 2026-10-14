@@ -5,7 +5,7 @@ import nodemailer from "nodemailer";
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
 ) {
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method not allowed" });
@@ -44,7 +44,7 @@ export default async function handler(
           resetToken,
           resetTokenExpiry,
         },
-      }
+      },
     );
 
     // Configure email transporter (you'll need to set up your email service)
@@ -55,7 +55,7 @@ export default async function handler(
       secure: false,
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        pass: process.env.EMAIL_PASS?.replace(/\s/g, ""),
       },
     });
 
